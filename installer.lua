@@ -1,0 +1,5 @@
+shell = require("shell")
+shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/GUI.lua")
+shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/POS.lua")
+shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/menu.json")
+shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/writer.lua")
