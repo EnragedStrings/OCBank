@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 component = require("component")
 gpu = require("component").gpu
 term = require("term")
@@ -608,5 +607,4 @@ end
 
 function setRes(x, y)
     gpu.setResolution(x, y)
->>>>>>> 83ee5ab (Setting Up)
 end
