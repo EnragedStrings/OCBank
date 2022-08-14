@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 computer = require("computer")
 magReader = require("component").os_magreader
 writer = require("component").os_cardwriter
@@ -806,4 +805,3 @@ while true do
     end
   end
 end
->>>>>>> 83ee5ab (Setting Up)
