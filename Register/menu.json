@@ -1,0 +1,121 @@
+<<<<<<< HEAD
+{
+    "items": 
+    {
+        "Item 1":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 2":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 3":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 4":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 5":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 6":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        }
+    }
+}
+=======
+{
+    "items": 
+    {
+        "Item 1":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 2":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 3":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 4":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 5":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        },
+        "Item 6":
+        {
+            "contents":
+            {
+                "Content 1": 1,
+                "Content 2": 2
+            },
+            "price": 7.49
+        }
+    }
+}
+>>>>>>> 83ee5ab (Setting Up)
