@@ -48,12 +48,34 @@ userDir = ("/home/users.txt")
 menuDir = ("/home/menu.json")
 orderDir = ("/home/orders.txt")
 apiKeyDir = ("/home/apiKey.txt")
+verDir = ("/home/version.txt")
 
 term.clear()
 
 local file = assert(io.open("/home/.shrc", "w"))
 file:write("POS.lua")
 file:close()
+
+if fs.exists(verDir) == true then
+  local file = assert(io.open(verDir))
+  version = tonumber(file:read(100000))
+  file:close()
+  shell.execute("rm version.txt")
+  shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/version.txt")
+  local file = assert(io.open(verDir))
+  gitversion = tonumber(file:read(100000))
+  file:close()
+  if gitversion > version then
+    shell.execute("rm installer.lua")
+    shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/installer.lua")
+    shell.execute("installer.lua")
+  end
+else
+  local file = assert(io.open(verDir, "w"))
+  file:write("0")
+  file:close()
+  computer.shutdown(true)
+end
 
 if fs.exists(userDir) == true then
   local file = assert(io.open(userDir))
@@ -109,39 +131,57 @@ else
   computer.shutdown(true)
 end
 
-if fs.exists(dir) == true then
-  local file = assert(io.open(dir))
-  screen = Split(file:read(1000), "\n")
-  empScreen = screen[1]
-  custScreen = screen[2]
-  file:close()
-
-else
-  print("If current screen is employee screen, enter '1'. Else, enter '2'")
-  pickedScreen = tostring(io.read())
-  for i = 1, #screens do
-    if gpu.getScreen() == screens[i].address and pickedScreen == "1" then
-      for j = 1, #screens do
-        if i == j then
-          firstScreen = screens[j].address
-        else
-          secondScreen = screens[j].address
+function screenSetup()
+  if #screens == 2 then
+    print("If current screen is employee screen, enter '1'. Else, enter '2'")
+    pickedScreen = tostring(io.read())
+    for i = 1, #screens do
+      if gpu.getScreen() == screens[i].address and pickedScreen == "1" then
+        for j = 1, #screens do
+          if i == j then
+            firstScreen = screens[j].address
+          else
+            secondScreen = screens[j].address
+          end
         end
-      end
-    elseif gpu.getScreen() == screens[i].address and pickedScreen == "2" then
-      for j = 1, #screens do
-        if i == j then
-          secondScreen = screens[j].address
-        else
-          firstScreen = screens[j].address
+      elseif gpu.getScreen() == screens[i].address and pickedScreen == "2" then
+        for j = 1, #screens do
+          if i == j then
+            secondScreen = screens[j].address
+          else
+            firstScreen = screens[j].address
+          end
         end
       end
     end
+    local file = assert(io.open(dir, "w"))
+    file:write(firstScreen.."\n"..secondScreen)
+    file:close()
+    computer.shutdown(true)
+  else
+    print("Error: Must Have Two Screens")
   end
-  local file = assert(io.open(dir, "w"))
-  file:write(firstScreen.."\n"..secondScreen)
-  file:close()
-  computer.shutdown(true)
+end
+
+if fs.exists(dir) == true then
+  local file = assert(io.open(dir))
+  screen = Split(file:read(1000), "\n")
+  if screen ~= nil then
+    if component.proxy(screen[1]) == nil or component.proxy(screen[2]) == nil then
+      file:write()
+      file:close()
+      screenSetup()
+    else
+      empScreen = screen[1]
+      custScreen = screen[2]
+      file:close()
+    end
+  else
+    file:close()
+    screenSetup()
+  end
+else
+  screenSetup()
 end
 
 function background(screen)
@@ -443,11 +483,12 @@ while true do
       end
     elseif y > 45 and 49 > y and pay == false then
       if x > 3 and 13 > x and order ~= nil then
+        term.setCursor(1,1)
         order[2][#order[2]][2] = math.abs(order[2][#order[2]][2] * io.read())
         updateOrders()
         term.setCursor(1,1)
         gpu.setBackground(0x5A5A5A)
-        gpu.fill(0, 0, 3, 50, " ")
+        gpu.fill(0, 1, 20, 1, " ")
       elseif x > 12 and 23 > x then
         order[2] = {}
         order[1] = {}
