@@ -8,6 +8,16 @@ internet = require("internet")
 serialization = require("serialization")
 shell = require("shell")
 fs = require("filesystem")
+
+
+
+os.sleep(1)
+print("Hello World!")
+os.sleep(5)
+
+
+
+
 if fs.exists("/home/GUI.lua") == false then
     shell.execute("wget https://raw.githubusercontent.com/sziberov/OpenComputers/master/lib/json.lua")
   end
