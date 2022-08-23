@@ -119,6 +119,11 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
     end
     if getAPI == true then
       apiKey = cardData
+      local file = assert(io.open(apiKeyDir, "w"))
+      file:write(apiKey)
+      file:close()
+      computer.shutdown(true)
+      getAPI = false
     elseif currentUser == nil then
       for i = 1, #users do
         if Split(users[i], " ")[1] == cardData then
@@ -144,14 +149,13 @@ if fs.exists(apiKeyDir) == true then
   apiKey = file:read(100000)
   file:close()
 else
-  local file = assert(io.open(apiKeyDir, "w"))
   print("Use API Card? (Y/n)")
   if io.read() == "y" then
     getAPI = true
     event.listen("magData", magData)
-    file:write(apiKey)
-    file:close()
-    computer.shutdown(true)
+    while getAPI == true do
+      os.sleep()
+    end
   else
     print("Input API Key (Ask Server Owner If Unknown!)")
     apiKey = io.read()
@@ -159,6 +163,7 @@ else
     if io.read() == "y" then
       writer.write(apiKey, "API KEY CARD", true, 7)
     end
+    local file = assert(io.open(apiKeyDir, "w"))
     file:write(apiKey)
     file:close()
     computer.shutdown(true)
