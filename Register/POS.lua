@@ -92,16 +92,77 @@ else
   computer.shutdown(true)
 end
 
+assignedReader = nil
+currentUser = nil
+function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
+  if assignedReader == nil then
+    assignedReader = address
+  end
+  if address == assignedReader then
+    if pay == true then
+      ccData = getCardData(cardData)
+      gpu.bind(custScreen)
+      gpu.setBackground(0x5A5A5A)
+      gpu.set(76, 15, "Input Pin:")
+      term.setCursor(76, 16)
+      pin = io.read()
+      gpu.fill(76, 15, 10, 2, " ")
+      gpu.set(74, 15, "Authorizing...")
+      gpu.bind(empScreen)
+      gpu.setBackground(0x5A5A5A)
+      gpu.fill(76, 15, 10, 2, " ")
+      gpu.set(74, 15, "Authorizing...")
+      ip1 = string.sub(data.sha256(pin), 0, 16)
+      ip2 = string.sub(data.sha256(pin), 17, 32)
+      ccDecrypt = Split(data.decrypt(ccData, ip1, ip2), ",")
+      
+    end
+    if getAPI == true then
+      apiKey = cardData
+    elseif currentUser == nil then
+      for i = 1, #users do
+        if Split(users[i], " ")[1] == cardData then
+          currentUser = Split(users[i], " ")
+          print("Active user: "..currentUser[1])
+        end
+      end
+      print("Writer Assigned: "..address)
+      event.ignore("magData", magData)
+      if currentUser ~= nil then
+        print("booting...")
+        display()
+      else
+        print("No User Found!")
+        event.listen("magData", magData)
+      end
+    end
+  end
+end
+
 if fs.exists(apiKeyDir) == true then
   local file = assert(io.open(apiKeyDir))
   apiKey = file:read(100000)
   file:close()
 else
   local file = assert(io.open(apiKeyDir, "w"))
-  print("Input API Key (Ask Server Owner If Unknown!)")
-  file:write(io.read())
-  file:close()
-  computer.shutdown(true)
+  print("Use API Card? (Y/n)")
+  if io.read() == "y" then
+    getAPI = true
+    event.listen("magData", magData)
+    file:write(apiKey)
+    file:close()
+    computer.shutdown(true)
+  else
+    print("Input API Key (Ask Server Owner If Unknown!)")
+    apiKey = io.read()
+    print("Would you like to write the key to a card? (Y/n)")
+    if io.read() == "y" then
+      writer.write(apiKey, "API KEY CARD", true, 7)
+    end
+    file:write(apiKey)
+    file:close()
+    computer.shutdown(true)
+  end
 end
 
 if fs.exists(orderDir) == true then
@@ -241,51 +302,6 @@ function getCardData(ccData)
   end
   
   return(content)
-end
-
-assignedReader = nil
-currentUser = nil
-function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
-  if assignedReader == nil then
-    assignedReader = address
-  end
-  if address == assignedReader then
-    if pay == true then
-      ccData = getCardData(cardData)
-      gpu.bind(custScreen)
-      gpu.setBackground(0x5A5A5A)
-      gpu.set(76, 15, "Input Pin:")
-      term.setCursor(76, 16)
-      pin = io.read()
-      gpu.fill(76, 15, 10, 2, " ")
-      gpu.set(74, 15, "Authorizing...")
-      gpu.bind(empScreen)
-      gpu.setBackground(0x5A5A5A)
-      gpu.fill(76, 15, 10, 2, " ")
-      gpu.set(74, 15, "Authorizing...")
-      ip1 = string.sub(data.sha256(pin), 0, 16)
-      ip2 = string.sub(data.sha256(pin), 17, 32)
-      ccDecrypt = Split(data.decrypt(ccData, ip1, ip2), ",")
-      
-    end
-    if currentUser == nil then
-      for i = 1, #users do
-        if Split(users[i], " ")[1] == cardData then
-          currentUser = Split(users[i], " ")
-          print("Active user: "..currentUser[1])
-        end
-      end
-      print("Writer Assigned: "..address)
-      event.ignore("magData", magData)
-      if currentUser ~= nil then
-        print("booting...")
-        display()
-      else
-        print("No User Found!")
-        event.listen("magData", magData)
-      end
-    end
-  end
 end
 
 function updateOrders()
