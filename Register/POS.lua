@@ -29,10 +29,10 @@ for address, name in component.list("screen", false) do
   table.insert(screens, component.proxy(address))
 end
 
-local magReaders = {}
-for address, name in component.list("os_magreader", false) do
-  table.insert(magReaders, component.proxy(address).address)
-end
+--local magReaders = {}
+--for address, name in component.list("os_magreader", false) do
+--  table.insert(magReaders, component.proxy(address).address)
+--end
 
 function Split(s, delimiter)
   result = {};
