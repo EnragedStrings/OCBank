@@ -649,10 +649,11 @@ function foreground(fscreen)
     else
       gpu.set(6, 3+i, order[i][1])
     end
+    price = tostring(shorten((tonumber(order[i][2])*tonumber(order[i][3])), 2, true))
     if gpu.getScreen() ~= custScreen then
-      gpu.set(22-#order[i][2], 3+i, currency..order[i][2].."[-]")
+      gpu.set(22-#price, 3+i, currency..price.."[-]")
     else
-      gpu.set(25-#order[i][2], 3+i, currency..order[i][2])
+      gpu.set(25-#price, 3+i, currency..price)
     end
   end
   calcTotal()
