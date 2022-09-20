@@ -33,13 +33,15 @@ itemWidth = (mWidth-((columns+1)*itemGap))/columns
 tax = 0.101
 total = 0
 subtotal = 0
+selected = 0
 mngr = false
+isMngr = false
 createcard = false
 currency = "$"
 
 screenDir = ("/home/screens.txt")
 userDir = ("/home/users.txt")
-menuDir = ("/home/menu.json")
+menuDir = ("/home/menu.lua")
 orderDir = ("/home/orders.txt")
 apiKeyDir = ("/home/apiKey.txt")
 verDir = ("/home/version.txt")
@@ -226,12 +228,6 @@ function screenSetup()
   computer.shutdown(true)
 end
 function dependents()
-
-  if fs.exists("/home/json.lua") == false then
-    shell.execute("wget https://raw.githubusercontent.com/sziberov/OpenComputers/master/lib/json.lua")
-  end
-  json = assert(loadfile "json.lua")()
-
   if fs.exists(screenDir) == true then
     local file = assert(io.open(screenDir))
     pScreens = Split(file:read(10000), "\n")
@@ -311,15 +307,10 @@ function dependents()
     computer.shutdown(true)
   end
   if fs.exists(menuDir) == true then
-    local file = assert(io.open(menuDir))
-    menu = json:decode(file:read(100000))
-    file:close()
-    for k, v in pairs(menu.items) do
-      table.insert(items, k)
-    end
-    table.sort(items)
+    require("menu")
+    menu = getMenu()
   else
-    shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/menu.json")
+    shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/menu.lua")
     computer.shutdown(true)
   end
   if fs.exists(apiKeyDir) == true then
@@ -351,14 +342,18 @@ end
 function deleteButton(name)
   for i = 1, #buttons do
     if buttons[i].name == name then
-      table.remove(buttons[i])
+      table.remove(buttons, i)
     end
   end
-  table.remove(functions, name)
 end
 function createButton(xpos, ypos, width, height, bColor, bName, bShow, bDispName, bNameColor, bCode)
     xpos = xpos*2
     width = width*2
+    for i = 1, #buttons do
+      if buttons[i].name == bName then
+        table.remove(buttons, i)
+      end
+    end
     table.insert(buttons, 
       {
         x = xpos,
@@ -523,24 +518,27 @@ function logo(time, color, lscreen)
   gpu.set(1, sH, "Created By EnragedStrings")
 end
 function createMenu()
-  for i = 1, math.ceil((#items/columns)) do
+  for i = 1, math.ceil((#menu/columns)) do
     for j = 1, columns do
-      if #items >= ((i-1)*columns)+j then
-        createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, buttonTheme.background, items[(((i-1)*columns)+j)], false, true, buttonTheme.foreground, function()
+      if #menu >= ((i-1)*columns)+j then
+        local pos = ((i-1)*columns)+j
+        os.sleep()
+        createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, buttonTheme.background, menu[pos].itemName, false, true, buttonTheme.foreground, function()
           if assigned == true and mngr == false then
-            for k, v in pairs(menu.items) do
-              if k == buttonClicked then
+            for l = 1, #menu do
+              if menu[l].itemName == buttonClicked then
+                menu[l].code()
                 found = false
-                for i = 1, #order do
-                  if order[i][1] == buttonClicked then
-                    selected = i
-                    order[i][3] = order[i][3] + 1
+                for m = 1, #order do
+                  if order[m][1] == buttonClicked then
+                    selected = m
+                    order[m][3] = order[m][3] + 1
                     found = true
                   end
                 end
                 if found == false then
                   selected = #order + 1
-                  table.insert(order, {buttonClicked, menu.items[k].price, 1})
+                  table.insert(order, {buttonClicked, menu[i].price, 1})
                 end
                 foreground(empScreen)
                 foreground(custScreen)
@@ -598,36 +596,8 @@ function calcTotal()
     gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
   end
 end
-function foreground(fscreen)
-  multi(fscreen)
-  gpu.setBackground(mainTheme.foreground)
-  if gpu.getScreen() ~= custScreen then
-    gpu.fill(5, 3, 22, sH-7, " ")
-  else
-    gpu.fill(5, 3, 22, sH-4, " ")
-  end
-  if gpu.getScreen() == custScreen then
-    gpu.set(6, sH-5, "Subtotal:")
-    gpu.set(6, sH-4, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-3, "Total:")
-  else
-    gpu.set(6, sH-8, "Subtotal:")
-    gpu.set(6, sH-7, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-6, "Total:")
-  end
-  calcTotal()
-  gpu.setForeground(mainTheme.text)
-  if fscreen == empScreen then
-    gpu.setBackground(rgb(10, 10, 10))
-    gpu.setBackground(mainTheme.background)
-    gpu.set(1, sH, "Created By EnragedStrings | User: "..string.upper(currentUser).." | "..string.upper(usrLvl))
-    if mngr == false then
-      refreshButtons({"Mngr Func", "New User"})
-    end
-    if usrLvl == "owner" or usrLvl == "manager" then
-      refreshButton("Mngr Func")
-    end
-  end
+function refreshOrder(screen)
+  multi(screen)
   gpu.setBackground(mainTheme.foreground)
   if selected > #order then
     selected = #order
@@ -657,6 +627,36 @@ function foreground(fscreen)
     end
   end
   calcTotal()
+end
+function foreground(fscreen)
+  multi(fscreen)
+  menu = getMenu()
+  gpu.setBackground(mainTheme.foreground)
+  if gpu.getScreen() ~= custScreen then
+    gpu.fill(5, 3, 22, sH-7, " ")
+  else
+    gpu.fill(5, 3, 22, sH-4, " ")
+  end
+  if gpu.getScreen() == custScreen then
+    gpu.set(6, sH-5, "Subtotal:")
+    gpu.set(6, sH-4, "Tax: "..shorten(tax*100, 2, true).."%")
+    gpu.set(6, sH-3, "Total:")
+  else
+    gpu.set(6, sH-8, "Subtotal:")
+    gpu.set(6, sH-7, "Tax: "..shorten(tax*100, 2, true).."%")
+    gpu.set(6, sH-6, "Total:")
+  end
+  gpu.setForeground(mainTheme.text)
+  if fscreen == empScreen then
+    gpu.setBackground(rgb(10, 10, 10))
+    gpu.setBackground(mainTheme.background)
+    gpu.set(1, sH, "Created By EnragedStrings | User: "..string.upper(currentUser).." | "..string.upper(usrLvl))
+    if usrLvl == "owner" or usrLvl == "manager" then
+      refreshButton("Mngr Func")
+    end
+    refreshOrder(fscreen)
+    refreshButtons({"Mngr Func", "New User"})
+  end
 end
 function cnewUser()
   gpu.set(35, #users+8, "Input Card")
@@ -728,6 +728,7 @@ end
 )
 createButton(17, sH-6, 15.5, 3, buttonTheme.background, "New User", false, true, buttonTheme.foreground, function()
   if mngr == true then
+    multi(empScreen)
     gpu.setBackground(mainTheme.foreground)
     gpu.setForeground(mainTheme.text)
     term.setCursor(35, #users+7)
