@@ -25,15 +25,16 @@ order = {}
 buttons = {}
 functions = {}
 items = {}
-columns = 4
+columns = 6
 rowH = 3
 mWidth = (sW/2) - 28
 itemGap = 1
 itemWidth = (mWidth-((columns+1)*itemGap))/columns
-tax = 0.101
+tax = 0.09
 total = 0
 subtotal = 0
 selected = 0
+itemnum = 0
 mngr = false
 isMngr = false
 createcard = false
@@ -49,9 +50,9 @@ verDir = ("/home/version.txt")
 buttonTheme = {
   background = rgb(5, 63, 150),
   foreground = rgb(255,255,255),
-  c1 = rgb(255,0,0),
-  c2 = rgb(0,0,255),
-  c3 = rgb(0,255,0),
+  c1 = rgb(150,0,0),
+  c2 = rgb(0,0,150),
+  c3 = rgb(0,100,0),
   ct1 = rgb(255,255,255),
   ct2 = rgb(255,255,255),
   ct3 = rgb(255,255,255)
@@ -444,15 +445,24 @@ function mouseClick(_, address, x, y, button, name)
         foreground(empScreen)
         foreground(custScreen)
       elseif x >= 23 and 26 > x and y > 3 and 30 > y then
-        if order[y-3] ~= nil then
-          if order[y-3][3] > 1 then
-            order[y-3][3] = order[y-3][3] - 1
+        start = 1
+        for i = 1, #order do
+          if start == y-3 then
+
+            if order[i] ~= nil then
+              if order[i][3] > 1 then
+                order[i][3] = order[i][3] - 1
+              else
+                table.remove(order, i)
+              end
+            end
+            foreground(empScreen)
+            foreground(custScreen)
+            start = start + #order[i][4] + 1
           else
-            table.remove(order, y-3)
+            start = start + #order[i][4] + 1
           end
         end
-        foreground(empScreen)
-        foreground(custScreen)
       else
         for i = 1, #buttons do
           if x >= buttons[i].x and buttons[i].x + buttons[i].w > x and y >= buttons[i].y and buttons[i].y + buttons[i].h > y then
@@ -523,25 +533,38 @@ function createMenu()
       if #menu >= ((i-1)*columns)+j then
         local pos = ((i-1)*columns)+j
         os.sleep()
-        createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, buttonTheme.background, menu[pos].itemName, false, true, buttonTheme.foreground, function()
+        if menu[pos].background ~= nil then
+          bcgrnd = menu[pos].background
+        else
+          bcgrnd = buttonTheme.background
+        end
+        if menu[pos].foreground ~= nil then
+          frgrnd = menu[pos].foreground
+        else
+          frgrnd = buttonTheme.foreground
+        end
+        createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, bcgrnd, menu[pos].itemName, false, true, buttonTheme.foreground, function()
           if assigned == true and mngr == false then
             for l = 1, #menu do
               if menu[l].itemName == buttonClicked then
                 menu[l].code()
-                found = false
-                for m = 1, #order do
-                  if order[m][1] == buttonClicked then
-                    selected = m
-                    order[m][3] = order[m][3] + 1
-                    found = true
+                if menu[l].defaultCode == true then
+                  found = false
+                  for m = 1, #order do
+                    if order[m][1] == buttonClicked then
+                      selected = getorderpos(m)
+                      order[m][3] = order[m][3] + 1
+                      found = true
+                    end
                   end
+                  if found == false then
+                    selected = getorderpos(#order) + 1
+                    table.insert(order, {buttonClicked, menu[l].price, 1, menu[l].contents})
+                    selected = getorderpos(#order)
+                  end
+                  foreground(empScreen)
+                  foreground(custScreen)
                 end
-                if found == false then
-                  selected = #order + 1
-                  table.insert(order, {buttonClicked, menu[i].price, 1})
-                end
-                foreground(empScreen)
-                foreground(custScreen)
               end
             end
           end
@@ -596,34 +619,72 @@ function calcTotal()
     gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
   end
 end
+function getSelector(input)
+  position = 0
+  for i = 1, #order do
+    if input >= position + 1 and 2 + #order[i][4] + position > input then
+      orderpos = position + 1
+      itemnum = i
+    end
+    position = position + #order[i][4] + 1
+  end
+  return(itemnum)
+end
+function getorderpos(ordernum)
+  position2 = 0
+  for i = 1, ordernum-1 do
+    position2 = position2 + #order[i][4] + 1
+  end
+  return(position2+1)
+end
 function refreshOrder(screen)
   multi(screen)
   gpu.setBackground(mainTheme.foreground)
-  if selected > #order then
-    selected = #order
+  if getSelector(selected) > #order then
+    selected = orderpos
   end
   gpu.setForeground(mainTheme.text)
   for i = 1, #order do
+    data = getorderpos(i)
     if order[i][3] > 10^10 then
       order[i][3] = 1
     end
-    if i == selected then
+    if i == itemnum then
       gpu.setBackground(rgb(60,60,60))
-      gpu.fill(6, 3+i, 20, 1, " ")
+      gpu.fill(6, 3+data, 20, 1, " ")
+      if #order[i][4] > 0 then
+        for j = 1, #order[i][4] do
+          gpu.fill(6, data+j+3, 20, 1, " ")
+        end
+      end
     else
       gpu.setBackground(mainTheme.foreground)
-      gpu.fill(6, 3+i, 20, 1, " ")
+      gpu.fill(6, 3+data, 20, 1, " ")
+      if #order[i][4] > 0 then
+        for j = 1, #order[i][4] do
+          gpu.fill(6, data+j+3, 20, 1, " ")
+        end
+      end
     end
     if order[i][3] > 1  then
-      gpu.set(6, 3+i, "("..shorten(order[i][3],1, false)..") "..order[i][1])
+      gpu.set(6, 3+data, "("..shorten(order[i][3],1, false)..") "..order[i][1])
     else
-      gpu.set(6, 3+i, order[i][1])
+      gpu.set(6, 3+data, order[i][1])
+    end
+    if #order[i][4] > 0 then
+      for j = 1, #order[i][4] do
+        if order[i][4][j][1] ~= "" then
+          gpu.set(8, data+j+3, "("..shorten(order[i][4][j][2],1, false)..") "..order[i][4][j][1])
+        else
+          gpu.set(8, data+j+3, order[i][4][j][1])
+        end
+      end
     end
     price = tostring(shorten((tonumber(order[i][2])*tonumber(order[i][3])), 2, true))
     if gpu.getScreen() ~= custScreen then
-      gpu.set(22-#price, 3+i, currency..price.."[-]")
+      gpu.set(22-#price, 3+data, currency..price.."[-]")
     else
-      gpu.set(25-#price, 3+i, currency..price)
+      gpu.set(25-#price, 3+data, currency..price)
     end
   end
   calcTotal()
@@ -696,28 +757,29 @@ end
 createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct2, function()
   if assigned == true then
     multi(empScreen)
-    if #order >= selected then
-      gpu.setForeground(mainTheme.foreground)
-      gpu.setBackground(mainTheme.foreground)
-      term.setCursor(5,3)
-      qin = tonumber(io.read())
-      qin = math.abs(qin)
-      if qin > 10^10 then
-        qin = 10^8
-      end
-      quan = qin
-      if (math.floor(quan*100))/100 == 0 then
-        quan = 1
-      end
-      if (math.floor(order[selected][3]*100))/100 == 0 then
-        order[selected][3] = 1
-      end
-      order[selected][3] = order[selected][3] * quan
-      background(empScreen)
-      background(custScreen)
-      foreground(empScreen)
-      foreground(custScreen)
+    if getSelector(selected) > #order then
+      selected = orderpos
     end
+    gpu.setForeground(mainTheme.foreground)
+    gpu.setBackground(mainTheme.foreground)
+    term.setCursor(5,3)
+    qin = tonumber(io.read())
+    qin = math.abs(qin)
+    if qin > 10^10 then
+      qin = 10^8
+    end
+    quan = qin
+    if (math.floor(quan*100))/100 == 0 then
+      quan = 1
+    end
+    if (math.floor(order[itemnum][3]*100))/100 == 0 then
+      order[itemnum][3] = 1
+    end
+    order[itemnum][3] = order[itemnum][3] * quan
+    background(empScreen)
+    background(custScreen)
+    foreground(empScreen)
+    foreground(custScreen)
   end
 end
 )
