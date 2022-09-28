@@ -1,9 +1,9 @@
-local function rgb(r,g,b)
+function rgb(r,g,b)
     local rgb = (r * 0x10000) + (g * 0x100) + b
     return tonumber((rgb))
   end
 
-local local items = 
+local items = 
 {
     {
         itemName = "T1 PC",
@@ -304,6 +304,6 @@ local local items =
     }
 }
 
-local function getMenu()
+function getMenu()
     return(items)
 end
