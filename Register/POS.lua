@@ -9,7 +9,6 @@ local term = require("term")
 local serialization = require("serialization")
 local shell = require("shell")
 local fs = require("filesystem")
-local m = require("component").modem
 local sW, sH = gpu.getResolution()
 local function rgb(r,g,b)
   local rgb = (r * 0x10000) + (g * 0x100) + b
