@@ -3,7 +3,7 @@ function rgb(r,g,b)
     return tonumber((rgb))
   end
 
-local items = 
+items = 
 {
     {
         itemName = "T1 PC",
