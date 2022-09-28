@@ -1,8 +1,8 @@
-computer = require("computer")
-magReader = require("component").os_magreader
-writer = require("component").os_cardwriter
-component = require("component")
-gpu = require("component").gpu
+local computer = require("computer")
+local magReader = require("component").os_magreader
+local writer = require("component").os_cardwriter
+local component = require("component")
+local gpu = require("component").gpu
 event = require("event")
 internet = require("internet")
 term = require("term")
