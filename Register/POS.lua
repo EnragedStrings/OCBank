@@ -1,16 +1,16 @@
-local computer = require("computer")
-local magReader = require("component").os_magreader
-local writer = require("component").os_cardwriter
-local component = require("component")
-local gpu = require("component").gpu
-local event = require("event")
-local internet = require("internet")
-local term = require("term")
-local serialization = require("serialization")
-local shell = require("shell")
-local fs = require("filesystem")
-local sW, sH = gpu.getResolution()
-local function rgb(r,g,b)
+computer = require("computer")
+magReader = require("component").os_magreader
+writer = require("component").os_cardwriter
+component = require("component")
+gpu = require("component").gpu
+event = require("event")
+internet = require("internet")
+term = require("term")
+serialization = require("serialization")
+shell = require("shell")
+fs = require("filesystem")
+sW, sH = gpu.getResolution()
+function rgb(r,g,b)
   local rgb = (r * 0x10000) + (g * 0x100) + b
   return tonumber((rgb))
 end
@@ -21,31 +21,31 @@ file:write("POS.lua")
 file:close()
 
 order = {}
-local buttons = {}
-local functions = {}
-local items = {}
-local columns = 4
-local rowH = 3
-local mWidth = (sW/2) - 28
-local itemGap = 1
-local itemWidth = (mWidth-((columns+1)*itemGap))/columns
-local tax = 0.101
-local total = 0
-local subtotal = 0
-local selected = 0
-local mngr = false
-local isMngr = false
-local createcard = false
-local currency = "$"
+buttons = {}
+functions = {}
+items = {}
+columns = 4
+rowH = 3
+mWidth = (sW/2) - 28
+itemGap = 1
+itemWidth = (mWidth-((columns+1)*itemGap))/columns
+tax = 0.101
+total = 0
+subtotal = 0
+selected = 0
+mngr = false
+isMngr = false
+createcard = false
+currency = "$"
 
-local screenDir = ("/home/screens.txt")
-local userDir = ("/home/users.txt")
-local menuDir = ("/home/menu.lua")
-local orderDir = ("/home/orders.txt")
-local apiKeyDir = ("/home/apiKey.txt")
-local verDir = ("/home/version.txt")
+screenDir = ("/home/screens.txt")
+userDir = ("/home/users.txt")
+menuDir = ("/home/menu.lua")
+orderDir = ("/home/orders.txt")
+apiKeyDir = ("/home/apiKey.txt")
+verDir = ("/home/version.txt")
 
-local buttonTheme = {
+buttonTheme = {
   background = rgb(5, 63, 150),
   foreground = rgb(255,255,255),
   c1 = rgb(255,0,0),
@@ -55,7 +55,7 @@ local buttonTheme = {
   ct2 = rgb(255,255,255),
   ct3 = rgb(255,255,255)
 }
-local mainTheme = {
+mainTheme = {
   background = rgb(40,40,40),
   middle = rgb(60,60,60),
   foreground = rgb(120,120,120),
@@ -66,9 +66,9 @@ local screens = {}
 for address, name in component.list("screen", false) do
   table.insert(screens, component.proxy(address))
 end
-local multiscreen = false
-local function Split(s, delimiter)
-  local result = {};
+multiscreen = false
+function Split(s, delimiter)
+  result = {};
   for match in (s..delimiter):gmatch("(.-)"..delimiter) do
       if match ~= nil then
         table.insert(result, match);
@@ -80,7 +80,7 @@ local function Split(s, delimiter)
   end
   return result;
 end
-local function shorten(n, d, t)
+function shorten(n, d, t)
   if n == "INF" then
     return(0)
   elseif n >= (10^9)-1 then
@@ -98,7 +98,7 @@ local function shorten(n, d, t)
     end
   end
 end
-local function format_num(amount, decimal, prefix, neg_prefix)
+function format_num(amount, decimal, prefix, neg_prefix)
   local str_amount,  formatted, famount, remain
 
   decimal = decimal or 2  -- default 2 decimal places
@@ -133,7 +133,7 @@ local function format_num(amount, decimal, prefix, neg_prefix)
 
   return formatted
 end
-local function format_int(number)
+function format_int(number)
 
   local i, j, minus, int, fraction = tostring(number):find('([-]?)(%d+)([.]?%d*)')
 
@@ -144,7 +144,7 @@ local function format_int(number)
   -- optional minus and fractional part back
   return minus .. int:reverse():gsub("^,", "") .. fraction
 end
-local function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
+function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
   --Listens To Card Readers
   if assigned == false then
     for i = 1, #users do
@@ -187,12 +187,12 @@ local function magData(eventName, address, playerName, cardData, cardUniqueId, i
     end
   end
 end
-local function multi(screenc)
+function multi(screenc)
   if multiscreen == true and screenc ~= nil then
     gpu.bind(screenc)
   end
 end
-local function screenSetup()
+function screenSetup()
   term.clear()
   print("If current screen is employee screen, enter '1'. Else, enter '2'")
   pickedScreen = tostring(io.read())
@@ -226,7 +226,7 @@ local function screenSetup()
   file:close()
   computer.shutdown(true)
 end
-local function dependents()
+function dependents()
   if fs.exists(screenDir) == true then
     local file = assert(io.open(screenDir))
     pScreens = Split(file:read(10000), "\n")
@@ -338,14 +338,14 @@ local function dependents()
     end
   end
 end
-local function deleteButton(name)
+function deleteButton(name)
   for i = 1, #buttons do
     if buttons[i].name == name then
       table.remove(buttons, i)
     end
   end
 end
-local function createButton(xpos, ypos, width, height, bColor, bName, bShow, bDispName, bNameColor, bCode)
+function createButton(xpos, ypos, width, height, bColor, bName, bShow, bDispName, bNameColor, bCode)
     xpos = xpos*2
     width = width*2
     for i = 1, #buttons do
@@ -377,7 +377,7 @@ local function createButton(xpos, ypos, width, height, bColor, bName, bShow, bDi
     end
     functions[bName] = bCode
 end
-local function refreshButtons(exceptions)
+function refreshButtons(exceptions)
   for i = 1, #buttons do
     found = false
     for j = 1, #exceptions do
@@ -395,7 +395,7 @@ local function refreshButtons(exceptions)
     end
   end
 end
-local function refreshButton(name)
+function refreshButton(name)
     for i = 1, #buttons do
         if buttons[i].name == name then
             gpu.setBackground(buttons[i].color)
@@ -407,7 +407,7 @@ local function refreshButton(name)
         end
     end
 end
-local function mouseClick(_, address, x, y, button, name)
+function mouseClick(_, address, x, y, button, name)
   if address == custScreen then
   else
     if button == 0 then
@@ -463,7 +463,7 @@ local function mouseClick(_, address, x, y, button, name)
     end
   end
 end
-local function logo(time, color, lscreen)
+function logo(time, color, lscreen)
   multi(lscreen)
   term.clear()
   if color == true then
@@ -516,7 +516,7 @@ local function logo(time, color, lscreen)
   end
   gpu.set(1, sH, "Created By EnragedStrings")
 end
-local function createMenu()
+function createMenu()
   for i = 1, math.ceil((#menu/columns)) do
     for j = 1, columns do
       if #menu >= ((i-1)*columns)+j then
@@ -550,7 +550,7 @@ local function createMenu()
     end
   end
 end
-local function boot()
+function boot()
   multi(empScreen)
   gpu.setBackground(0x000000)
   if custScreen ~= nil then
@@ -565,7 +565,7 @@ local function boot()
     gpu.set(sW-4, sH, os.date("%H:%M"))
   end
 end
-local function background(bscreen)
+function background(bscreen)
   multi(bscreen)
   gpu.setBackground(mainTheme.background)
   gpu.fill(1, 1, sW, sH, " ")
@@ -595,7 +595,7 @@ function calcTotal()
     gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
   end
 end
-local function refreshOrder(screen)
+function refreshOrder(screen)
   multi(screen)
   gpu.setBackground(mainTheme.foreground)
   if selected > #order then
@@ -627,7 +627,7 @@ local function refreshOrder(screen)
   end
   calcTotal()
 end
-local function foreground(fscreen)
+function foreground(fscreen)
   multi(fscreen)
   menu = getMenu()
   gpu.setBackground(mainTheme.foreground)
@@ -657,7 +657,7 @@ local function foreground(fscreen)
     refreshButtons({"Mngr Func", "New User"})
   end
 end
-local function cnewUser()
+function cnewUser()
   gpu.set(35, #users+8, "Input Card")
   os.sleep(2)
   writer.write("SMCP", newUser[1], true)
