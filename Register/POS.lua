@@ -69,7 +69,7 @@ for address, name in component.list("screen", false) do
 end
 local multiscreen = false
 local function Split(s, delimiter)
-  result = {};
+  local result = {};
   for match in (s..delimiter):gmatch("(.-)"..delimiter) do
       if match ~= nil then
         table.insert(result, match);
