@@ -5,792 +5,534 @@ component = require("component")
 gpu = require("component").gpu
 event = require("event")
 internet = require("internet")
-term = require("term")
 serialization = require("serialization")
 shell = require("shell")
 fs = require("filesystem")
-sW, sH = gpu.getResolution()
-function rgb(r,g,b)
-  local rgb = (r * 0x10000) + (g * 0x100) + b
-  return tonumber((rgb))
-end
 
+if fs.exists("/home/GUI.lua") == false then
+    shell.execute("wget https://raw.githubusercontent.com/sziberov/OpenComputers/master/lib/json.lua")
+  end
+  require("GUI")
+x = 160
+y = 50
 
-local file = assert(io.open("/home/.shrc", "w"))
-file:write("POS.lua")
-file:close()
+x = (x/2)+1
+y = y
+term.clear()
 
-order = {}
-buttons = {}
-functions = {}
-items = {}
-columns = 4
-rowH = 3
-mWidth = (sW/2) - 28
-itemGap = 1
-itemWidth = (mWidth-((columns+1)*itemGap))/columns
-tax = 0.101
-total = 0
-subtotal = 0
-selected = 0
-mngr = false
-isMngr = false
-createcard = false
-currency = "$"
+span = 5
 
-screenDir = ("/home/screens.txt")
-userDir = ("/home/users.txt")
-menuDir = ("/home/menu.lua")
-orderDir = ("/home/orders.txt")
-apiKeyDir = ("/home/apiKey.txt")
-verDir = ("/home/version.txt")
-
-buttonTheme = {
-  background = rgb(5, 63, 150),
-  foreground = rgb(255,255,255),
-  c1 = rgb(255,0,0),
-  c2 = rgb(0,0,255),
-  c3 = rgb(0,255,0),
-  ct1 = rgb(255,255,255),
-  ct2 = rgb(255,255,255),
-  ct3 = rgb(255,255,255)
-}
-mainTheme = {
-  background = rgb(40,40,40),
-  middle = rgb(60,60,60),
-  foreground = rgb(120,120,120),
-  text = rgb(255,255,255)
-}
+tax = 0.1
 
 local screens = {}
 for address, name in component.list("screen", false) do
   table.insert(screens, component.proxy(address))
 end
-multiscreen = false
+
+--local magReaders = {}
+--for address, name in component.list("os_magreader", false) do
+--  table.insert(magReaders, component.proxy(address).address)
+--end
+
 function Split(s, delimiter)
   result = {};
   for match in (s..delimiter):gmatch("(.-)"..delimiter) do
       if match ~= nil then
         table.insert(result, match);
       end
-      if result == nil then
-        result[1] = s
-        result[2] = nil
-      end
   end
   return result;
 end
-function shorten(n, d, t)
-  if n == "INF" then
-    return(0)
-  elseif n >= (10^9)-1 then
-    local cn = Split(n, "0")
-    return string.format("%E", n)
-  elseif n >= 10^6 then
-      return string.format("%."..d.."fM", n / 10^6)
-  elseif n >= 10^3 then
-      return string.format("%."..d.."fk", n / 10^3)
-  else
-    if t == true then
-      return string.format("%."..d.."f", n)
-    else
-      return tostring(n)
-    end
+
+dir = ("/home/screens.txt")
+userDir = ("/home/users.txt")
+menuDir = ("/home/menu.json")
+orderDir = ("/home/orders.txt")
+apiKeyDir = ("/home/apiKey.txt")
+verDir = ("/home/version.txt")
+
+term.clear()
+
+local file = assert(io.open("/home/.shrc", "w"))
+file:write("POS.lua")
+file:close()
+
+if fs.exists(verDir) == true then
+  local file = assert(io.open(verDir))
+  version = tonumber(file:read(100000))
+  file:close()
+  shell.execute("rm version.txt")
+  shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/version.txt")
+  local file = assert(io.open(verDir))
+  gitversion = tonumber(file:read(100000))
+  file:close()
+  if gitversion > version then
+    shell.execute("rm installer.lua")
+    shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/installer.lua")
+    shell.execute("installer.lua")
   end
-end
-function format_num(amount, decimal, prefix, neg_prefix)
-  local str_amount,  formatted, famount, remain
-
-  decimal = decimal or 2  -- default 2 decimal places
-  neg_prefix = neg_prefix or "-" -- default negative sign
-
-  famount = math.abs(round(amount,decimal))
-  famount = math.floor(famount)
-
-  remain = round(math.abs(amount) - famount, decimal)
-
-        -- comma to separate the thousands
-  formatted = comma_value(famount)
-
-        -- attach the decimal portion
-  if (decimal > 0) then
-    remain = string.sub(tostring(remain),3)
-    formatted = formatted .. "." .. remain ..
-                string.rep("0", decimal - string.len(remain))
-  end
-
-        -- attach prefix string e.g '$' 
-  formatted = (prefix or "") .. formatted 
-
-        -- if value is negative then format accordingly
-  if (amount<0) then
-    if (neg_prefix=="()") then
-      formatted = "("..formatted ..")"
-    else
-      formatted = neg_prefix .. formatted 
-    end
-  end
-
-  return formatted
-end
-function format_int(number)
-
-  local i, j, minus, int, fraction = tostring(number):find('([-]?)(%d+)([.]?%d*)')
-
-  -- reverse the int-string and append a comma to all blocks of 3 digits
-  int = int:reverse():gsub("(%d%d%d)", "%1,")
-
-  -- reverse the int-string back remove an optional comma and put the 
-  -- optional minus and fractional part back
-  return minus .. int:reverse():gsub("^,", "") .. fraction
-end
-function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
-  --Listens To Card Readers
-  if assigned == false then
-    for i = 1, #users do
-      if users[i][1] == cardUniqueId or users[i][1] == "nil" then
-        if users[i][2] == "defaultUser" or users[i][1] == cardUniqueId then
-          assigned = true
-          currentUser = users[i][2]
-          usrLvl = users[i][3]
-          background(custScreen)
-          background(empScreen)
-          foreground(empScreen)
-          foreground(custScreen)
-        end
-      end
-    end
-  elseif newMemeberCard == true then
-    m.broadcast(8000, "SMCP cadd "..cardUniqueId.." 1 "..cardName)
-    newMemeberCard = false
-  elseif newswipe == true then
-    copy = false
-    for i = 1, #users do
-      if users[i][1] == cardUniqueId then
-        copy = true
-      end
-    end
-    if copy == false then
-      table.insert(users, {cardUniqueId,newUser[1],newUser[2]})
-      local file = assert(io.open(userDir, "w"))
-      newUsers = ""
-      for i = 1, #users do
-        if i == #users then
-          newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
-        else
-          newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
-        end
-      end
-      file:write(newUsers)
-      file:close()
-      newswipe = false
-    end
-  end
-end
-function multi(screenc)
-  if multiscreen == true and screenc ~= nil then
-    gpu.bind(screenc)
-  end
-end
-function screenSetup()
-  term.clear()
-  print("If current screen is employee screen, enter '1'. Else, enter '2'")
-  pickedScreen = tostring(io.read())
-  while pickedScreen ~= "1" and pickedScreen ~= "2" do
-    term.clear()
-    print("If current screen is employee screen, enter '1'. Else, enter '2'")
-    print("Invalid Input")
-    pickedScreen = tostring(io.read())
-  end
-  for i = 1, #screens do
-    if gpu.getScreen() == screens[i].address and pickedScreen == "1" then
-      for j = 1, #screens do
-        if i == j then
-          firstScreen = screens[j].address
-        else
-          secondScreen = screens[j].address
-        end
-      end
-    elseif gpu.getScreen() == screens[i].address and pickedScreen == "2" then
-      for j = 1, #screens do
-        if i == j then
-          secondScreen = screens[j].address
-        else
-          firstScreen = screens[j].address
-        end
-      end
-    end
-  end
-  local file = assert(io.open(screenDir, "w"))
-  file:write(firstScreen.."\n"..secondScreen)
+else
+  local file = assert(io.open(verDir, "w"))
+  file:write("0")
   file:close()
   computer.shutdown(true)
 end
-function dependents()
-  if fs.exists(screenDir) == true then
-    local file = assert(io.open(screenDir))
-    pScreens = Split(file:read(10000), "\n")
-    file:close()
-    if pScreens ~= nil then
-      trip = false
-      for i = 1, 2 do
-        if component.proxy(pScreens[i]) == nil then
-          trip = true
-        end
-      end
-      if trip == true then
-        if #screens > 1 then
-          screenSetup()
-        end
-      else
-        multiscreen = true
-        empScreen = pScreens[1]
-        custScreen = pScreens[2]
-      end
-    else
-      if #screens > 1 then
-        screenSetup()
-      end
-    end
+
+if fs.exists(userDir) == true then
+  local file = assert(io.open(userDir))
+  users = file:read(100000)
+  if users ~= nil then
+    users = Split(users, "\n")
   end
-  if fs.exists(verDir) == true then
-    local file = assert(io.open(verDir))
-    version = tonumber(file:read(100000))
-    file:close()
-    gitversion = 0
-    while gitversion == nil do
-      shell.execute("rm version.txt")
-      shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/version.txt")
-      local file = assert(io.open(verDir))
-      gitversion = tonumber(file:read(100000))
-      file:close()
-    end
-    if gitversion > version then
-      shell.execute("rm installer.lua")
-      shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/installer.lua")
-      shell.execute("installer.lua")
-    end
-  else
-    local file = assert(io.open(verDir, "w"))
-    file:write("0")
-    file:close()
-    computer.shutdown(true)
+  file:close()
+else
+  local file = assert(io.open(userDir, "w"))
+  file:write("defaultUser owner")
+  file:close()
+  computer.shutdown(true)
+end
+
+assignedReader = nil
+currentUser = nil
+function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
+  if assignedReader == nil then
+    assignedReader = address
   end
-  if fs.exists(userDir) == true then
-    local file = assert(io.open(userDir))
-    users = file:read(100000)
-    if users ~= nil then
-      users = Split(users, "\n")
-      for i = 1, #users do
-        users[i] = Split(users[i], " ")
-      end
+  if address == assignedReader then
+    if pay == true then
+      ccData = getCardData(cardData)
+      gpu.bind(custScreen)
+      gpu.setBackground(0x5A5A5A)
+      gpu.set(76, 15, "Input Pin:")
+      term.setCursor(76, 16)
+      pin = io.read()
+      gpu.fill(76, 15, 10, 2, " ")
+      gpu.set(74, 15, "Authorizing...")
+      gpu.bind(empScreen)
+      gpu.setBackground(0x5A5A5A)
+      gpu.fill(76, 15, 10, 2, " ")
+      gpu.set(74, 15, "Authorizing...")
+      ip1 = string.sub(data.sha256(pin), 0, 16)
+      ip2 = string.sub(data.sha256(pin), 17, 32)
+      ccDecrypt = Split(data.decrypt(ccData, ip1, ip2), ",")
+      
     end
-    file:close()
-  else
-    local file = assert(io.open(userDir, "w"))
-    file:write("nil defaultUser owner")
-    file:close()
-    writer.write("defaultUser", "defaultUser", false)
-    computer.shutdown(true)
-  end
-  if fs.exists(orderDir) == true then
-    local file = assert(io.open(orderDir))
-    orders = file:read(100000)
-    if orders ~= nil then
-  
-    end
-    file:close()
-  else
-    local file = assert(io.open(orderDir, "w"))
-    file:close()
-    computer.shutdown(true)
-  end
-  if fs.exists(menuDir) == true then
-    require("menu")
-    menu = getMenu()
-  else
-    shell.execute("wget https://raw.githubusercontent.com/EnragedStrings/OCBank/main/Register/menu.lua")
-    computer.shutdown(true)
-  end
-  if fs.exists(apiKeyDir) == true then
-    local file = assert(io.open(apiKeyDir))
-    apiKey = file:read(100000)
-    file:close()
-  else
-    print("Use API Card? (Y/n)")
-    if io.read() == "y" then
-      getAPI = true
-      event.pull("magData", magData)
-      while getAPI == true do
-        os.sleep()
-      end
-    else
-      print("Input API Key (Ask Server Owner If Unknown!)")
-      apiKey = io.read()
-      print("Would you like to write the key to a card? (Y/n)")
-      if io.read() == "y" then
-        writer.write(apiKey, "API KEY CARD", true, 7)
-      end
+    if getAPI == true then
+      apiKey = cardData
       local file = assert(io.open(apiKeyDir, "w"))
       file:write(apiKey)
       file:close()
       computer.shutdown(true)
-    end
-  end
-end
-function deleteButton(name)
-  for i = 1, #buttons do
-    if buttons[i].name == name then
-      table.remove(buttons, i)
-    end
-  end
-end
-function createButton(xpos, ypos, width, height, bColor, bName, bShow, bDispName, bNameColor, bCode)
-    xpos = xpos*2
-    width = width*2
-    for i = 1, #buttons do
-      if buttons[i].name == bName then
-        table.remove(buttons, i)
-      end
-    end
-    table.insert(buttons, 
-      {
-        x = xpos,
-        y = ypos,
-        w = width,
-        h = height,
-        name = bName,
-        color = bColor,
-        code = bCode,
-        show = bShow,
-        dispName = bDispName,
-        nameColor = bNameColor
-      }
-    )
-    if bShow == true or bShow == nil then
-      gpu.setBackground(bColor)
-      gpu.fill(xpos, ypos, width, height, " ")
-      if bDispName == true then
-        gpu.setForeground(bNameColor)
-        gpu.set(xpos+((width/2)-(#bName)/2), ypos+(height/2), bName)
-      end
-    end
-    functions[bName] = bCode
-end
-function refreshButtons(exceptions)
-  for i = 1, #buttons do
-    found = false
-    for j = 1, #exceptions do
-      if buttons[i].name == exceptions[j] then
-        found = true
-      end
-    end
-    if found == false then
-      gpu.setBackground(buttons[i].color)
-      gpu.fill(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, " ")
-      if buttons[i].dispName == true then
-        gpu.setForeground(buttons[i].nameColor)
-        gpu.set(buttons[i].x+((buttons[i].w/2)-(#buttons[i].name)/2), buttons[i].y+(buttons[i].h/2), buttons[i].name)
-      end
-    end
-  end
-end
-function refreshButton(name)
-    for i = 1, #buttons do
-        if buttons[i].name == name then
-            gpu.setBackground(buttons[i].color)
-            gpu.fill(buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h, " ")
-            if buttons[i].dispName == true then
-              gpu.setForeground(buttons[i].nameColor)
-              gpu.set(buttons[i].x+((buttons[i].w/2)-(#buttons[i].name)/2), buttons[i].y+(buttons[i].h/2), buttons[i].name)
-            end
+      getAPI = false
+    elseif currentUser == nil then
+      for i = 1, #users do
+        if Split(users[i], " ")[1] == cardData then
+          currentUser = Split(users[i], " ")
+          print("Active user: "..currentUser[1])
         end
+      end
+      print("Writer Assigned: "..address)
+      event.ignore("magData", magData)
+      if currentUser ~= nil then
+        print("booting...")
+        display()
+      else
+        print("No User Found!")
+        event.listen("magData", magData)
+      end
     end
+  end
 end
-function mouseClick(_, address, x, y, button, name)
-  if address == custScreen then
+
+if fs.exists(apiKeyDir) == true then
+  local file = assert(io.open(apiKeyDir))
+  apiKey = file:read(100000)
+  file:close()
+else
+  print("Use API Card? (Y/n)")
+  if io.read() == "y" then
+    getAPI = true
+    event.listen("magData", magData)
+    while getAPI == true do
+      os.sleep()
+    end
   else
-    if button == 0 then
-      if x >= 61 and 64 > x and y > 6 and 30 > y then
-        removed = false
-        if users[y-6][2] ~= currentUser or currentUser == "defaultUser" then
-          if usrLvl == "manager" and users[y-6][3] == "employee" then
-            table.remove(users, y-6)
-            removed = true
-          elseif usrLvl == "owner" then
-            table.remove(users, y-6)
-            removed = true
-          end
-          if removed == true then
-            local file = assert(io.open(userDir, "w"))
-            newUsers = ""
-            for i = 1, #users do
-              if i == #users then
-                newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
-              else
-                newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
-              end
-            end
-            file:write(newUsers)
-            file:close()
-            background(empScreen)
-            mngr = false
-            foreground(empScreen)
-          end
-        end
-      elseif x >= 6 and 23 > x and y > 3 and 30 > y then
-        selected = y - 3
-        foreground(empScreen)
-        foreground(custScreen)
-      elseif x >= 23 and 26 > x and y > 3 and 30 > y then
-        if order[y-3] ~= nil then
-          if order[y-3][3] > 1 then
-            order[y-3][3] = order[y-3][3] - 1
+    print("Input API Key (Ask Server Owner If Unknown!)")
+    apiKey = io.read()
+    print("Would you like to write the key to a card? (Y/n)")
+    if io.read() == "y" then
+      writer.write(apiKey, "API KEY CARD", true, 7)
+    end
+    local file = assert(io.open(apiKeyDir, "w"))
+    file:write(apiKey)
+    file:close()
+    computer.shutdown(true)
+  end
+end
+
+if fs.exists(orderDir) == true then
+  local file = assert(io.open(orderDir))
+  orders = file:read(100000)
+  if orders ~= nil then
+
+  end
+  file:close()
+else
+  local file = assert(io.open(orderDir, "w"))
+  file:close()
+  computer.shutdown(true)
+end
+
+if fs.exists("/home/json.lua") == false then
+  shell.execute("wget https://raw.githubusercontent.com/sziberov/OpenComputers/master/lib/json.lua")
+end
+json = assert(loadfile "json.lua")()
+
+if fs.exists(menuDir) == true then
+  local file = assert(io.open(menuDir))
+  menu = json:decode(file:read(100000))
+  file:close()
+else
+  local file = assert(io.open(menuDir, "w"))
+  file:close()
+  computer.shutdown(true)
+end
+
+function screenSetup()
+  if #screens == 2 then
+    print("If current screen is employee screen, enter '1'. Else, enter '2'")
+    pickedScreen = tostring(io.read())
+    for i = 1, #screens do
+      if gpu.getScreen() == screens[i].address and pickedScreen == "1" then
+        for j = 1, #screens do
+          if i == j then
+            firstScreen = screens[j].address
           else
-            table.remove(order, y-3)
+            secondScreen = screens[j].address
           end
         end
-        foreground(empScreen)
-        foreground(custScreen)
-      else
-        for i = 1, #buttons do
-          if x >= buttons[i].x and buttons[i].x + buttons[i].w > x and y >= buttons[i].y and buttons[i].y + buttons[i].h > y then
-            buttonClicked = buttons[i].name
-            functions[buttons[i].name]()
+      elseif gpu.getScreen() == screens[i].address and pickedScreen == "2" then
+        for j = 1, #screens do
+          if i == j then
+            secondScreen = screens[j].address
+          else
+            firstScreen = screens[j].address
           end
         end
       end
     end
+    local file = assert(io.open(dir, "w"))
+    file:write(firstScreen.."\n"..secondScreen)
+    file:close()
+    computer.shutdown(true)
+  else
+    print("Error: Must Have Two Screens")
   end
 end
-function logo(time, color, lscreen)
-  multi(lscreen)
-  term.clear()
-  if color == true then
-      gpu.setForeground(0x00FF00)
+
+if fs.exists(dir) == true then
+  local file = assert(io.open(dir))
+  screen = Split(file:read(1000), "\n")
+  if screen ~= nil then
+    if component.proxy(screen[1]) == nil or component.proxy(screen[2]) == nil then
+      file:write()
+      file:close()
+      screenSetup()
+    else
+      empScreen = screen[1]
+      custScreen = screen[2]
+      file:close()
+    end
+  else
+    file:close()
+    screenSetup()
   end
-  term.setCursor((sW/2)-33,(sH/2)-3)
-  print(" ██████╗███╗   ███╗ █████╗ ██████╗        ██╗███╗  ██╗ █████╗    ")
-  os.sleep(time)
-  if color == true then
-      gpu.setForeground(0xFFB640)
-  end
-  term.setCursor((sW/2)-33,(sH/2)-2)
-  print("██╔════╝████╗ ████║██╔══██╗██╔══██╗       ██║████╗ ██║██╔══██╗   ")
-  os.sleep(time)
-  if color == true then
-      gpu.setForeground(0xFF6D00)
-  end
-  term.setCursor((sW/2)-33,(sH/2)-1)
-  print("╚█████╗ ██╔████╔██║██║  ╚═╝██████╔╝       ██║██╔██╗██║██║  ╚═╝   ")
-  os.sleep(time)
-  if color == true then
-      gpu.setForeground(0xFF2400)
-  end
-  term.setCursor((sW/2)-33,(sH/2))
-  print(" ╚═══██╗██║╚██╔╝██║██║  ██╗██╔═══╝        ██║██║╚████║██║  ██╗   ")
-  os.sleep(time)
-  if color == true then
-      gpu.setForeground(0x9924C0)
-  end
-  term.setCursor((sW/2)-33,(sH/2)+1)
-  print("██████╔╝██║ ╚═╝ ██║╚█████╔╝██║            ██║██║ ╚███║╚█████╔╝██╗")
-  os.sleep(time)
-  if color == true then
-      gpu.setForeground(0x0092FF)
-  end
-  term.setCursor((sW/2)-33,(sH/2)+2)
-  print("╚═════╝ ╚═╝     ╚═╝ ╚════╝ ╚═╝            ╚═╝╚═╝  ╚══╝ ╚════╝ ╚═╝")
-  gpu.setForeground(0xFFFFFF)
-  gpu.fill((sW/2)-35, (sH/2)-3, 1, 6, "║")
-  gpu.fill((sW/2)+33, (sH/2)-3, 1, 6, "║")
-  gpu.set((sW/2)-35, (sH/2)-4, "╔═══════════════════════════════════════════════════════════════════╗")
-  gpu.set((sW/2)-35, (sH/2)+3, "╚═══════════════════════════════════════════════════════════════════╝")
-  if color == true then
-      gpu.setForeground(0xFF0000)
-  end
-  term.setCursor((sW/2)-33,(sH/2)+3)
-  print("Plese Swipe Employee Card!")
-  if color == true then
-    gpu.setForeground(0xFFFFFF)
-  end
-  gpu.set(1, sH, "Created By EnragedStrings")
+else
+  screenSetup()
 end
-function createMenu()
-  for i = 1, math.ceil((#menu/columns)) do
-    for j = 1, columns do
-      if #menu >= ((i-1)*columns)+j then
-        local pos = ((i-1)*columns)+j
-        os.sleep()
-        createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, buttonTheme.background, menu[pos].itemName, false, true, buttonTheme.foreground, function()
-          if assigned == true and mngr == false then
-            for l = 1, #menu do
-              if menu[l].itemName == buttonClicked then
-                menu[l].code()
-                found = false
-                for m = 1, #order do
-                  if order[m][1] == buttonClicked then
-                    selected = m
-                    order[m][3] = order[m][3] + 1
-                    found = true
-                  end
+
+function background(screen)
+  if screen == empScreen then
+    drawShape("box", screen, 0, 1, x, y, 0x5A5A5A)
+    drawShape("box", screen, 2, 3, x-4, y-4, 0x878787)
+    drawShape("box", screen, 2, 7, 15, 1, 0x5A5A5A)
+    drawShape("box", screen, 2, 45, 15, 1, 0x5A5A5A)
+    drawShape("box", screen, 16, 3, 1, y-4, 0x5A5A5A)
+    drawShape("box", screen, x-17, 3, 1, y-4, 0x5A5A5A)
+    gpu.setBackground(0x5A5A5A)
+    gpu.set(4,2,"Made By EnragedStrings | Active User: "..currentUser[1])
+  elseif screen == custScreen then
+    drawShape("box", screen, 0, 1, x, y, 0x5A5A5A)
+    drawShape("box", screen, 2, 3, x-4, y-4, 0x878787)
+    drawShape("box", screen, 17, 3, 1, y-4, 0x5A5A5A)
+  end
+end
+
+function foreground(screen)
+  if screen == empScreen then
+    makeButton("Quantity", screen, 1, y-4, 4.5, 3, 0xFFFFFF, 0x0000FF)
+    makeButton("Clear", screen, 3.25, y-4, 5, 3, 0xFFFFFF, 0xFF0000)
+    makeButton("Pay", screen, 5.75, y-4, 4.5, 3, 0x000000, 0x00FF00)
+    makeButton("Exit", screen, 33, 45, 12, 3, 0xFFFFFF, 0xFF0000)
+
+    count = 0
+    for k, v in pairs(menu.items) do
+      count = count + 1
+      local row = (math.floor((count - 1) / span))
+      local column = (count % span) - 1
+      if column == -1 then
+          column = (span - 1)
+      end
+      if menu.items[k].contents ~= nil and menu.items[k].price > 0 then
+        makeButton(k.." $"..menu.items[k].price, empScreen, 9.3 + (column * 4.5), 4 + (row*4), 8.5, 3, 0xFFFFFF, 0xFF0000)
+      end
+    end
+
+    if currentUser[2] == "manager" or currentUser[2] == "owner" then
+      makeButton("Mngr Functions", screen, 33, 4, 12, 3, 0xFFFFFF, 0xFF0000)
+    end
+
+    
+  else
+    
+  end
+end
+
+function getCardData(ccData)
+  local response = internet.request("http://69.164.205.86/"..apiKey.."/"..ccData)
+
+  local content = ""
+  for chunk in response.read do
+    content = content .. chunk
+  end
+  
+  return(content)
+end
+
+function updateOrders()
+  gpu.bind(empScreen)
+  gpu.setBackground(0x878787)
+  gpu.fill(4,8,28, y-13, " ")
+  if orders ~= nil then
+    for i = 1, #orders do
+      if 34 > (5+((i-1)*5))+4 then
+        gpu.fill(5+((i-1)*5), 4, 4, 2, " ")
+      end
+    end
+  end
+  subtotal = 0
+  if order ~= nil then
+    for i = 1, #order[2] do
+      if order[2][i][2] == nil or order[2][i][2] == 1 then
+        gpu.set(6, 8+i, order[2][i][1])
+      else
+        gpu.set(6, 8+i, "("..order[2][i][2]..") "..order[2][i][1])
+      end
+      gpu.set(25 - #tostring(menu.items[order[2][i][1]].price), 8+i, "$"..menu.items[order[2][i][1]].price.." [-]")
+      subtotal = subtotal + (menu.items[order[2][i][1]].price * order[2][i][2])
+    end
+  end
+
+  taxa = math.floor(((subtotal * tax)*100)+0.5)/100
+  total = subtotal + taxa
+
+  gpu.set(6, y-9, "Subtotal:")
+  gpu.set(6, y-8, "Tax ("..(tax*100).."%):")
+  gpu.set(6, y-7, "Total:")
+  gpu.set(29 - #tostring(subtotal), y-9, "$"..subtotal)
+  gpu.set(29 - #tostring(taxa), y-8, "$"..taxa)
+  gpu.set(29 - #tostring(total), y-7, "$"..total)
+
+  gpu.bind(custScreen)
+  gpu.setBackground(0x878787)
+  gpu.fill(4,3,28, y-4, " ")
+  if order ~= nil then
+    for i = 1, #order[2] do
+      if order[2][i][2] == nil or order[2][i][2] == 1 then
+        gpu.set(6, 3+i, order[2][i][1])
+      else
+        gpu.set(6, 3+i, "("..order[2][i][2]..") "..order[2][i][1])
+      end
+      gpu.set(31 - #tostring(menu.items[order[2][i][1]].price), 3+i, "$"..menu.items[order[2][i][1]].price)
+    end
+  end
+  gpu.set(6, y-5, "Subtotal:")
+  gpu.set(6, y-4, "Tax ("..(tax*100).."%):")
+  gpu.set(6, y-3, "Total:")
+  gpu.set(31 - #tostring(subtotal), y-5, "$"..subtotal)
+  gpu.set(31 - #tostring(taxa), y-4, "$"..taxa)
+  gpu.set(31 - #tostring(total), y-3, "$"..total)
+
+  gpu.bind(empScreen)
+end
+
+function display()
+  background(empScreen)
+  background(custScreen)
+  foreground(empScreen)
+  updateOrders()
+end
+gpu.bind(empScreen)
+
+print("Please Swipe Card")
+event.listen("magData", magData)
+
+mng = false
+pay = false
+while true do
+  local _, address, x, y, button, name = event.pull("touch")
+  if button == 0 and tostring(address) == tostring(empScreen) then
+    if 156 > x and x > 131 and 7 > y and y > 3 and pay == false then
+      if currentUser[2] == "manager" or currentUser[2] == "owner" then
+        if mng == false then
+          mng = true
+          drawShape("box", empScreen, 17, 3, 47, 46, 0x878787)
+          drawShape("box", empScreen, 18, 4, 15, 44, 0x5A5A5A)
+          makeButton("Add User", empScreen, 9, 45, 15, 3, 0x000000, 0x00FF00)
+          for i = 1, #users do
+            gpu.setForeground(0xFFFFFF)
+            gpu.setBackground(0x5A5A5A)
+            gpu.set(37, 4+i, Split(users[i], " ")[1])
+            if Split(users[i], " ")[1] ~= currentUser[1] then
+              if Split(users[i], " ")[2] ~= "manager" or currentUser[2] == "owner" then
+                if Split(users[i], " ")[2] ~= "owner" or currentUser[2] == "owner" then
+                  gpu.set(62, 4+i, "[-]")
                 end
-                if found == false then
-                  selected = #order + 1
-                  table.insert(order, {buttonClicked, menu[i].price, 1})
-                end
-                foreground(empScreen)
-                foreground(custScreen)
               end
             end
-          end
-        end
-        )
-      end
-    end
-  end
-end
-function boot()
-  multi(empScreen)
-  gpu.setBackground(0x000000)
-  if custScreen ~= nil then
-    logo(0.05, true, custScreen)
-  end
-  logo(0.05, true, empScreen)
-  assigned = false
-  event.listen("magData", magData)
-  while assigned == false do
-    os.sleep()
-    gpu.setForeground(mainTheme.text)
-    gpu.set(sW-4, sH, os.date("%H:%M"))
-  end
-end
-function background(bscreen)
-  multi(bscreen)
-  gpu.setBackground(mainTheme.background)
-  gpu.fill(1, 1, sW, sH, " ")
-  gpu.fill(sW-29, 3, 2, sH-4, " ")
-  gpu.setBackground(mainTheme.foreground)
-  gpu.fill(5, 3, sW-8, sH-4, " ")
-  gpu.setBackground(mainTheme.background)
-  gpu.set(1, sH, "Created By EnragedStrings")
-  gpu.fill(sW-27, 3, 2, sH-4, " ")
-  gpu.fill(27, 3, 2, sH-4, " ")
-end
-function calcTotal()
-  gpu.setBackground(mainTheme.foreground)
-  subtotal = 0
-  for i = 1, #order do
-    subtotal = subtotal + (tonumber(order[i][2])*tonumber(order[i][3]))
-  end
-  total = math.floor((((subtotal*tax)+subtotal)*100)+0.5)/100
-  gpu.setForeground(mainTheme.text)
-  if gpu.getScreen() == custScreen then
-    gpu.set(25-#(shorten(subtotal,2, true)), sH-5, currency..(shorten(subtotal,2, true)))
-    gpu.set(25-#(shorten(tax*subtotal,2, true)), sH-4, (currency..shorten(tax*subtotal,2, true)))
-    gpu.set(25-#format_int(string.format("%.2f",total)), sH-3, currency..format_int(string.format("%.2f",total)))
-  else
-    gpu.set(25-#(shorten(subtotal,2, true)), sH-8, currency..(shorten(subtotal,2, true)))
-    gpu.set(25-#(shorten(tax*subtotal,2, true)), sH-7, (currency..shorten(tax*subtotal,2, true)))
-    gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
-  end
-end
-function refreshOrder(screen)
-  multi(screen)
-  gpu.setBackground(mainTheme.foreground)
-  if selected > #order then
-    selected = #order
-  end
-  gpu.setForeground(mainTheme.text)
-  for i = 1, #order do
-    if order[i][3] > 10^10 then
-      order[i][3] = 1
-    end
-    if i == selected then
-      gpu.setBackground(rgb(60,60,60))
-      gpu.fill(6, 3+i, 20, 1, " ")
-    else
-      gpu.setBackground(mainTheme.foreground)
-      gpu.fill(6, 3+i, 20, 1, " ")
-    end
-    if order[i][3] > 1  then
-      gpu.set(6, 3+i, "("..shorten(order[i][3],1, false)..") "..order[i][1])
-    else
-      gpu.set(6, 3+i, order[i][1])
-    end
-    price = tostring(shorten((tonumber(order[i][2])*tonumber(order[i][3])), 2, true))
-    if gpu.getScreen() ~= custScreen then
-      gpu.set(22-#price, 3+i, currency..price.."[-]")
-    else
-      gpu.set(25-#price, 3+i, currency..price)
-    end
-  end
-  calcTotal()
-end
-function foreground(fscreen)
-  multi(fscreen)
-  menu = getMenu()
-  gpu.setBackground(mainTheme.foreground)
-  if gpu.getScreen() ~= custScreen then
-    gpu.fill(5, 3, 22, sH-7, " ")
-  else
-    gpu.fill(5, 3, 22, sH-4, " ")
-  end
-  if gpu.getScreen() == custScreen then
-    gpu.set(6, sH-5, "Subtotal:")
-    gpu.set(6, sH-4, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-3, "Total:")
-  else
-    gpu.set(6, sH-8, "Subtotal:")
-    gpu.set(6, sH-7, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-6, "Total:")
-  end
-  gpu.setForeground(mainTheme.text)
-  if fscreen == empScreen then
-    gpu.setBackground(rgb(10, 10, 10))
-    gpu.setBackground(mainTheme.background)
-    gpu.set(1, sH, "Created By EnragedStrings | User: "..string.upper(currentUser).." | "..string.upper(usrLvl))
-    if usrLvl == "owner" or usrLvl == "manager" then
-      refreshButton("Mngr Func")
-    end
-    refreshOrder(fscreen)
-    refreshButtons({"Mngr Func", "New User"})
-  end
-end
-function cnewUser()
-  gpu.set(35, #users+8, "Input Card")
-  os.sleep(2)
-  writer.write("SMCP", newUser[1], true)
-  gpu.set(35, #users+8, "Swipe Card")
-  newswipe = true
-  while newswipe == true do
-    os.sleep()
-  end
-  background(empScreen)
-  mngr = false
-  foreground(empScreen)
-end
-dependents()
-
-createButton((sW/2)-12, sH-5, 10, 3, buttonTheme.background, "Exit", false, true, buttonTheme.foreground, function()
-  if assigned == true then
-    if createcard == true then
-      computer.shutdown(true)
-    end
-    mngr = false
-    boot()
-  end
-end
-)
-createButton(2.5, sH-4, 3.5, 3, buttonTheme.c1, "Clear", false, true, buttonTheme.ct1, function()
-  if assigned == true then
-    order = {}
-    background(empScreen)
-    background(custScreen)
-    foreground(empScreen)
-    foreground(custScreen)
-  end
-end
-)
-createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct2, function()
-  if assigned == true then
-    multi(empScreen)
-    if #order >= selected then
-      gpu.setForeground(mainTheme.foreground)
-      gpu.setBackground(mainTheme.foreground)
-      term.setCursor(5,3)
-      qin = tonumber(io.read())
-      qin = math.abs(qin)
-      if qin > 10^10 then
-        qin = 10^8
-      end
-      quan = qin
-      if (math.floor(quan*100))/100 == 0 then
-        quan = 1
-      end
-      if (math.floor(order[selected][3]*100))/100 == 0 then
-        order[selected][3] = 1
-      end
-      order[selected][3] = order[selected][3] * quan
-      background(empScreen)
-      background(custScreen)
-      foreground(empScreen)
-      foreground(custScreen)
-    end
-  end
-end
-)
-createButton(10, sH-4, 3.5, 3, buttonTheme.c3, "Pay", false, true, buttonTheme.ct3, function()
-  if assigned == true then
-  end
-end
-)
-createButton(17, sH-6, 15.5, 3, buttonTheme.background, "New User", false, true, buttonTheme.foreground, function()
-  if mngr == true then
-    multi(empScreen)
-    gpu.setBackground(mainTheme.foreground)
-    gpu.setForeground(mainTheme.text)
-    term.setCursor(35, #users+7)
-    newUser = Split(io.read().." ", " ")
-    newUser[2] = string.lower(newUser[2])
-    if newUser[2] ~= "employee" and newUser[2] ~= "owner" and newUser[2] ~= "manager" then
-      newUser[2] = "employee"
-    end
-    if usrLvl == "manager" then
-      if newUser[2] == "employee" then
-        cnewUser()
-      end
-    else
-      cnewUser()
-    end
-  end
-end
-)
-createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, true, buttonTheme.foreground, function()
-  if assigned == true then
-    if usrLvl == "owner" or usrLvl == "manager" then
-      if mngr == false then
-        mngr = true
-        multi(empScreen)
-        gpu.setForeground(mainTheme.text)
-        gpu.setBackground(rgb(80,80,80))
-        gpu.fill(29, 3, sW-56, sH-4, " ")
-        gpu.setBackground(mainTheme.background)
-        gpu.fill(32, 4, 35, sH-6, " ")
-        gpu.setBackground(mainTheme.foreground)
-        gpu.fill(34, 5, 31, sH-8, " ")
-        gpu.set(35, 5, "Employees:")
-        refreshButton("New User")
-        gpu.setBackground(mainTheme.foreground)
-        gpu.setForeground(mainTheme.text)
-        for i = 1, #users do
-          gpu.set(35, 6+i, users[i][2].." | "..users[i][3])
-          if users[i][2] ~= currentUser or currentUser == "defaultUser" then
-            if usrLvl == "manager" and users[i][3] == "employee" then
-              gpu.set(61, 6+i, "[-]")
-            elseif usrLvl == "owner" then
-              gpu.set(61, 6+i, "[-]")
+            if Split(users[i], " ")[2] == "manager" then
+              gpu.set(53, 4+i, "Manager")
+            elseif Split(users[i], " ")[2] == "owner" then
+              gpu.set(53, 4+i, "Owner")
+            else
+              gpu.set(53, 4+i, "Employee")
             end
           end
+        else
+          mng = false
+          display()
         end
-      else
-        mngr = false
-        background(empScreen)
-        foreground(empScreen)
       end
+    elseif 156 > x and x > 131 and 48 > y and y > 44 and pay == false then
+      computer.shutdown(true)
+    elseif 66 > x and x > 36 and 48 > y and y > 44 and pay == false then
+      gpu.setBackground(0)
+      term.setCursor(37, 5 + #users)
+      inputUser = io.read()
+      inputUser = Split(inputUser, " ")
+      if inputUser[2] ~= nil and currentUser[2] ~= "owner" then
+        inputUser = inputUser[1].." Employee"
+        inputUser = Split(inputUser, " ")
+      end
+
+      local file = assert(io.open(userDir))
+      usersr = file:read(10000)
+      file:close()
+      local file = assert(io.open(userDir, "w"))
+      if inputUser[2] ~= nil then
+        file:write(usersr.."\n"..inputUser[1].." "..inputUser[2])
+      else
+        file:write(usersr.."\n"..inputUser[1].." employee")
+      end
+      file:close()
+      if inputUser[2] == "manager" then
+        writer.write(inputUser[1], "Manager Card: '"..inputUser[1].."'", false, 1)
+      elseif inputUser[2] == "owner" then
+        writer.write(inputUser[1], "Owner Card: '"..inputUser[1].."'", false, 4)
+      else
+        writer.write(inputUser[1], "Employee Card: '"..inputUser[1].."'", false, 3)
+      end
+      computer.shutdown(true)
+    elseif 64 > x and x > 61 and 5 + #users > y and y > 4 and mng == true and pay == false then
+      if Split(users[y-4], " ")[1] ~= currentUser[1] then
+        if Split(users[y-4], " ")[2] ~= "manager" or currentUser[2] == "owner" then
+          if Split(users[y-4], " ")[2] ~= "owner" or currentUser[2] == "owner" then
+            table.remove(users, y-4)
+            userString = nil
+            for i = 1, #users do
+              if i ~= 1 then
+                userString = userString.."\n"..users[i]
+              else
+                userString = users[i]
+              end
+            end
+            local file = assert(io.open(userDir, "w"))
+            file:write(userString)
+            file:close()
+            computer.shutdown(true)
+          end
+        end
+      end
+    elseif 128 > x and x > 34 and 49 > y and y > 3 and pay == false then
+      count = 0
+      for k, v in pairs(menu.items) do
+        count = count + 1
+        local row = (math.floor((count - 1) / span))
+        local column = (count % span) - 1
+        if column == -1 then
+            column = (span - 1)
+        end
+        if (54 + (column * 18)) > x and x > (36 + (column * 18)) and 4 + (row*4) + 3 > y and y > 3 + (row*4) and menu.items[k] ~= nil and pay == false then
+          if order == nil then
+            order = {}
+            if orders == nil then
+              orders = {}
+            end
+            order[1] = #orders + 1
+            order[2] = {}
+          end
+          local found = false
+          for i = 1, #order[2] do
+            if order[2][i][1] == k then
+              found = true
+              order[2][i][2] = order[2][i][2] + 1
+            end
+          end
+          if found == false then
+            table.insert(order[2], {k, 1})
+          end
+          updateOrders()
+        end
+      end
+    elseif x == 28 and 40 > y and y > 8 and pay == false then
+      if order[2][y-8] ~= nil then
+        if order[2][y-8][2] == nil or order[2][y-8][2] == 1 then
+          table.remove(order[2], (y-8))
+        else
+          order[2][y-8][2] = order[2][y-8][2] - 1
+        end
+        updateOrders()
+      end
+    elseif y > 45 and 49 > y and pay == false then
+      if x > 3 and 13 > x and order ~= nil then
+        term.setCursor(1,1)
+        order[2][#order[2]][2] = math.abs(order[2][#order[2]][2] * io.read())
+        updateOrders()
+        term.setCursor(1,1)
+        gpu.setBackground(0x5A5A5A)
+        gpu.fill(0, 1, 20, 1, " ")
+      elseif x > 12 and 23 > x then
+        order[2] = {}
+        order[1] = {}
+        updateOrders()
+      elseif x > 22 and 32 > x then
+        pay = true
+        gpu.bind(custScreen)
+        gpu.setBackground(0x5A5A5A)
+        gpu.fill(55, 10, 50, 30, " ")
+        gpu.set(77, 11, "Payment")
+        gpu.set(72, 13, "Please Swipe Card")
+        gpu.bind(empScreen)
+        gpu.setBackground(0x5A5A5A)
+        gpu.fill(55, 10, 50, 30, " ")
+        gpu.set(77, 11, "Payment")
+        gpu.set(73, 13, "Waiting For Card")
+        makeButton("Cancel", empScreen, 17.5, 36, 10, 3, 0xFFFFFF, 0xFF0000)
+        event.listen("magData", magData)
+      end
+    elseif x > 69 and 90 > x and y > 35 and 39 > y and pay == true then
+      pay = false
+      display()
     end
   end
-end
-)
-
-createMenu()
-boot()
-
-event.listen("touch", mouseClick)
-
-while true do
-    os.sleep(0.1)
-    gpu.setBackground(mainTheme.background)
-    gpu.setForeground(mainTheme.text)
-    gpu.set(sW-4, sH, os.date("%H:%M"))
 end
