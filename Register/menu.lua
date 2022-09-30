@@ -3,7 +3,7 @@ function rgb(r,g,b)
     return tonumber((rgb))
   end
 
-items = 
+local items = 
 {
     {
         itemName = "T1 PC",
@@ -58,7 +58,7 @@ items =
             {"T2 Card", 2},
             {"T3 HDD", 1},
             {"T2 HDD", 1},
-            {"Floppy Disc", 1},
+            {"Floppy Disk", 1},
             {"EEPROM", 1},
             {"Keyboard", 1},
             {"", 1}
@@ -273,10 +273,39 @@ items =
         end
     },
     {
+        itemName = "T1 CPU",
+        contents = {},
+        price = 30.00,
+        background = rgb(0, 40, 95),
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "T2 CPU",
+        contents = {},
+        price = 50.00,
+        background = rgb(0, 50, 130),
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "T3 CPU",
+        contents = {},
+        price = 800.00,
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
         itemName = "Term Srvr",
         contents = {},
         price = 1000.00,
-        background = rgb(0, 0, 0),
+        
         defaultCode = true,
         code = function()
             --code here
@@ -286,7 +315,97 @@ items =
         itemName = "Adapter",
         contents = {},
         price = 25.00,
-        background = rgb(0, 0, 0),
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Server Rack",
+        contents = {},
+        price = 50.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Pwr Convtr",
+        contents = {},
+        price = 10.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Disk Drive",
+        contents = {},
+        price = 5.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "EEPROM",
+        contents = {},
+        price = 5.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Relay",
+        contents = {},
+        price = 25.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Raid",
+        contents = {},
+        price = 50.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "OC Manual",
+        contents = {},
+        price = 5.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Analizer",
+        contents = {},
+        price = 10.00,
+        
+        defaultCode = true,
+        code = function()
+            --code here
+        end
+    },
+    {
+        itemName = "Floppy Disk",
+        contents = {},
+        price = 25.00,
+        
         defaultCode = true,
         code = function()
             --code here
@@ -296,7 +415,7 @@ items =
         itemName = "Cable",
         contents = {},
         price = 0.05,
-        background = rgb(0, 0, 0),
+        
         defaultCode = true,
         code = function()
             --code here
