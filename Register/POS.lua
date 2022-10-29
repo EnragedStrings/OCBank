@@ -7,10 +7,13 @@ event = require("event")
 internet = require("internet")
 term = require("term")
 serialization = require("serialization")
+process = require("process")
 shell = require("shell")
 fs = require("filesystem")
-m = require("component").modem
+--m = require("component").modem
 sW, sH = gpu.getResolution()
+halt = false
+process.info().data.signal = function() end
 function rgb(r,g,b)
   local rgb = (r * 0x10000) + (g * 0x100) + b
   return tonumber((rgb))
@@ -450,64 +453,66 @@ function refreshButton(name)
     end
 end
 function mouseClick(_, address, x, y, button, name)
-  if address == custScreen then
-  else
-    if button == 0 then
-      if x >= 61 and 64 > x and y > 6 and 30 > y and pay == false then
-        removed = false
-        if users[y-6][2] ~= currentUser or currentUser == "defaultUser" then
-          if usrLvl == "manager" and users[y-6][3] == "employee" then
-            table.remove(users, y-6)
-            removed = true
-          elseif usrLvl == "owner" then
-            table.remove(users, y-6)
-            removed = true
-          end
-          if removed == true then
-            local file = assert(io.open(userDir, "w"))
-            newUsers = ""
-            for i = 1, #users do
-              if i == #users then
-                newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
-              else
-                newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
-              end
+  if halt == false then
+    if address == custScreen then
+    else
+      if button == 0 then
+        if x >= 61 and 64 > x and y > 6 and 30 > y and pay == false then
+          removed = false
+          if users[y-6][2] ~= currentUser or currentUser == "defaultUser" then
+            if usrLvl == "manager" and users[y-6][3] == "employee" then
+              table.remove(users, y-6)
+              removed = true
+            elseif usrLvl == "owner" then
+              table.remove(users, y-6)
+              removed = true
             end
-            file:write(newUsers)
-            file:close()
-            background(empScreen)
-            mngr = false
-            foreground(empScreen)
+            if removed == true then
+              local file = assert(io.open(userDir, "w"))
+              newUsers = ""
+              for i = 1, #users do
+                if i == #users then
+                  newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
+                else
+                  newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
+                end
+              end
+              file:write(newUsers)
+              file:close()
+              background(empScreen)
+              mngr = false
+              foreground(empScreen)
+            end
           end
-        end
-      elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false then
-        selected = y - 3
-        foreground(empScreen)
-        foreground(custScreen)
-      elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false then
-        start = 1
-        for i = 1, #order do
-          if start == y-3 then
+        elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false then
+          selected = y - 3
+          foreground(empScreen)
+          foreground(custScreen)
+        elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false then
+          start = 1
+          for i = 1, #order do
+            if start == y-3 then
 
-            if order[i] ~= nil then
-              if order[i][3] > 1 then
-                order[i][3] = order[i][3] - 1
-              else
-                table.remove(order, i)
+              if order[i] ~= nil then
+                if order[i][3] > 1 then
+                  order[i][3] = order[i][3] - 1
+                else
+                  table.remove(order, i)
+                end
               end
+              foreground(empScreen)
+              foreground(custScreen)
+              start = start + #order[i][4] + 1
+            else
+              start = start + #order[i][4] + 1
             end
-            foreground(empScreen)
-            foreground(custScreen)
-            start = start + #order[i][4] + 1
-          else
-            start = start + #order[i][4] + 1
           end
-        end
-      else
-        for i = 1, #buttons do
-          if x >= buttons[i].x and buttons[i].x + buttons[i].w > x and y >= buttons[i].y and buttons[i].y + buttons[i].h > y then
-            buttonClicked = buttons[i].name
-            functions[buttons[i].name]()
+        else
+          for i = 1, #buttons do
+            if x >= buttons[i].x and buttons[i].x + buttons[i].w > x and y >= buttons[i].y and buttons[i].y + buttons[i].h > y then
+              buttonClicked = buttons[i].name
+              functions[buttons[i].name]()
+            end
           end
         end
       end
@@ -584,7 +589,7 @@ function createMenu()
           frgrnd = buttonTheme.foreground
         end
         createButton((15+itemGap)+((itemWidth+itemGap)*(j-1)), 4+((itemGap+rowH)*(i-1)), itemWidth, rowH, bcgrnd, menu[pos].itemName, false, true, buttonTheme.foreground, function()
-          if assigned == true and pay == false and mngr == false then
+          if assigned == true and pay == false and mngr == false and halt == false then
             for l = 1, #menu do
               if menu[l].itemName == buttonClicked then
                 menu[l].code()
@@ -756,7 +761,7 @@ function foreground(fscreen)
       refreshButton("Mngr Func")
     end
     refreshOrder(fscreen)
-    refreshButtons({"Mngr Func", "New User", "Cancel"})
+    refreshButtons({"Mngr Func", "New User", "Cancel", "Reboot", "Stop POS"})
   end
 end
 function cnewUser()
@@ -796,7 +801,7 @@ dependents()
 tax = getTax(apiKey)
 
 createButton((sW/2)-12, sH-5, 10, 3, buttonTheme.background, "Exit", false, true, buttonTheme.foreground, function()
-  if assigned == true and pay == false then
+  if assigned == true and pay == false and halt == false then
     if createcard == true then
       computer.shutdown(true)
     end
@@ -806,7 +811,7 @@ createButton((sW/2)-12, sH-5, 10, 3, buttonTheme.background, "Exit", false, true
 end
 )
 createButton(2.5, sH-4, 3.5, 3, buttonTheme.c1, "Clear", false, true, buttonTheme.ct1, function()
-  if assigned == true and pay == false then
+  if assigned == true and pay == false and halt == false then
     order = {}
     background(empScreen)
     background(custScreen)
@@ -816,7 +821,7 @@ createButton(2.5, sH-4, 3.5, 3, buttonTheme.c1, "Clear", false, true, buttonThem
 end
 )
 createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct2, function()
-  if assigned == true and pay == false then
+  if assigned == true and pay == false and halt == false then
     multi(empScreen)
     if getSelector(selected) > #order then
       selected = orderpos
@@ -845,7 +850,7 @@ createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct
 end
 )
 createButton(10, sH-4, 3.5, 3, buttonTheme.c3, "Pay", false, true, buttonTheme.ct3, function()
-  if assigned == true and pay == false then
+  if assigned == true and pay == false and halt == false then
     pay = true
     pwidth = 50
     pheight = 8
@@ -894,8 +899,24 @@ createButton(17, sH-6, 15.5, 3, buttonTheme.background, "New User", false, true,
   end
 end
 )
+createButton(34.5, 4, 15.5, 3, buttonTheme.background, "Reboot", false, true, buttonTheme.foreground, function()
+  if mngr == true and pay == false then
+    computer.shutdown(true)
+  end
+end
+)
+createButton(34.5, 8, 15.5, 3, buttonTheme.background, "Stop POS", false, true, buttonTheme.foreground, function()
+  if mngr == true and pay == false and usrLvl == "owner" then
+    gpu.setBackground(0x000000)
+    term.clear()
+    halt = true
+    event.ignore("touch")
+    event.ignore("magData")
+  end
+end
+)
 createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, true, buttonTheme.foreground, function()
-  if assigned == true and pay == false then
+  if assigned == true and pay == false and halt == false then
     if usrLvl == "owner" or usrLvl == "manager" then
       if mngr == false then
         mngr = true
@@ -909,6 +930,10 @@ createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, tr
         gpu.fill(34, 5, 31, sH-8, " ")
         gpu.set(35, 5, "Employees:")
         refreshButton("New User")
+        refreshButton("Reboot")
+        if usrLvl == "owner" then
+          refreshButton("Stop POS")
+        end
         gpu.setBackground(mainTheme.foreground)
         gpu.setForeground(mainTheme.text)
         for i = 1, #users do
@@ -936,7 +961,7 @@ boot()
 
 event.listen("touch", mouseClick)
 
-while true do
+while halt == false do
     os.sleep(0.1)
     gpu.setBackground(mainTheme.background)
     gpu.setForeground(mainTheme.text)
