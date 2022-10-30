@@ -1,10 +1,32 @@
+buttonTheme = {
+  background = rgb(5, 63, 150),
+  foreground = rgb(255,255,255),
+  c1 = rgb(150,0,0),
+  c2 = rgb(0,0,150),
+  c3 = rgb(0,100,0),
+  ct1 = rgb(255,255,255),
+  ct2 = rgb(255,255,255),
+  ct3 = rgb(255,255,255)
+}
+mainTheme = {
+  background = rgb(40,40,40),
+  middle = rgb(60,60,60),
+  foreground = rgb(120,120,120),
+  text = rgb(255,255,255)
+}
+
+local currency = "$"
+
+
+
+
 local process = require("process")
 local component = require("component")
 local term = require("term")
 process.info().data.signal = function() end
 
 local shown = false
-while not (component.isAvailable("internet") and component.isAvailable("gpu")) do
+while not (component.isAvailable("internet") and component.isAvailable("gpu") and component.isAvailable("os_magreader") and component.isAvailable("os_cardwriter")) do
   if shown == false then 
     term.clear()
     print("Key components not found.") 
@@ -54,7 +76,6 @@ local mngr = false
 local isMngr = false
 local createcard = false
 local processing = false
-local currency = "$"
 
 local screenDir = ("/home/screens.txt")
 screenDirFile = ""
@@ -65,23 +86,6 @@ local menuDir = ("/home/menu.lua")
 local orderDir = ("/home/orders.txt")
 local apiKeyDir = ("/home/apiKey.txt")
 local verDir = ("/home/version.txt")
-
-buttonTheme = {
-  background = rgb(5, 63, 150),
-  foreground = rgb(255,255,255),
-  c1 = rgb(150,0,0),
-  c2 = rgb(0,0,150),
-  c3 = rgb(0,100,0),
-  ct1 = rgb(255,255,255),
-  ct2 = rgb(255,255,255),
-  ct3 = rgb(255,255,255)
-}
-mainTheme = {
-  background = rgb(40,40,40),
-  middle = rgb(60,60,60),
-  foreground = rgb(120,120,120),
-  text = rgb(255,255,255)
-}
 
 local screens = {}
 for address, name in component.list("screen", true) do
