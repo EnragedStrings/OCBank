@@ -57,7 +57,9 @@ local processing = false
 local currency = "$"
 
 local screenDir = ("/home/screens.txt")
+screenDirFile = ""
 local readerDir = ("/home/reader.txt")
+readerDirFile = ""
 local userDir = ("/home/users.txt")
 local menuDir = ("/home/menu.lua")
 local orderDir = ("/home/orders.txt")
@@ -90,15 +92,17 @@ for address, name in component.list("os_magreader", true) do
   table.insert(readers, component.proxy(address))
 end
 function Split(s, delimiter)
-  result = {};
-  for match in (s..delimiter):gmatch("(.-)"..delimiter) do
-      if match ~= nil then
-        table.insert(result, match);
-      end
-      if result == nil then
-        result[1] = s
-        result[2] = nil
-      end
+  if s ~= nil then
+    result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        if match ~= nil then
+          table.insert(result, match);
+        end
+        if result == nil then
+          result[1] = s
+          result[2] = nil
+        end
+    end
   end
   return result;
 end
@@ -195,52 +199,57 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
           end
         end
       end
-    elseif newMemeberCard == true then
-      m.broadcast(8000, "SMCP cadd "..cardUniqueId.." 1 "..cardName)
-      newMemeberCard = false
-    elseif newswipe == true then
-      copy = false
-      for i = 1, #users do
-        if users[i][1] == cardUniqueId then
-          copy = true
-        end
-      end
-      if copy == false then
-        table.insert(users, {cardUniqueId,newUser[1],newUser[2]})
-        local file = assert(io.open(userDir, "w"))
-        newUsers = ""
+    elseif assigned == true then
+      if newMemeberCard == true then
+        m.broadcast(8000, "SMCP cadd "..cardUniqueId.." 1 "..cardName)
+        newMemeberCard = false
+      elseif newswipe == true then
+        copy = false
         for i = 1, #users do
-          if i == #users then
-            newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
-          else
-            newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
+          if users[i][1] == cardUniqueId then
+            copy = true
           end
         end
-        file:write(newUsers)
-        file:close()
-        newswipe = false
-      end
-    elseif pay == true and processing == false then
-      processing = true
-      gpu.setBackground(mainTheme.foreground)
-      gpu.fill((sW/2)-9, pheight+4, 18, 1, " ")
-      gpu.set((sW/2)-7, pheight+4, "Input Pin:")
-      term.setCursor((sW/2)+4, pheight+4)
-      pininput = io.read()
-      while pininput == "" or pininput == nil do
+        if copy == false then
+          table.insert(users, {cardUniqueId,newUser[1],newUser[2]})
+          local file = assert(io.open(userDir, "w"))
+          newUsers = ""
+          for i = 1, #users do
+            if i == #users then
+              newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
+            else
+              newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
+            end
+          end
+          file:write(newUsers)
+          file:close()
+          newswipe = false
+        end
+      elseif pay == true and processing == false then
+        processing = true
+        gpu.setBackground(mainTheme.foreground)
+        gpu.fill((sW/2)-9, pheight+4, 18, 1, " ")
+        gpu.set((sW/2)-7, pheight+4, "Input Pin:")
         term.setCursor((sW/2)+4, pheight+4)
         pininput = io.read()
-      end
-      transresult = transaction(apiKey, cardData, pininput, POSCard, subtotal)
-      if string.find(transresult, "Approved") ~= nil then
-        gpu.set((sW/2)-(4.5), pheight+6, "Approved!")
-        os.sleep(2)
-        pay = false
-        processing = false
+        while pininput == "" or pininput == nil do
+          term.setCursor((sW/2)+4, pheight+4)
+          pininput = io.read()
+        end
+        transresult = transaction(apiKey, cardData, pininput, POSCard, subtotal)
+        if string.find(transresult, "Approved") ~= nil then
+          gpu.set((sW/2)-(4.5), pheight+6, "Approved!")
+          os.sleep(2)
+          pay = false
+          processing = false
+          background()
+          foreground()
+        else
+          gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
+        end
+      else
         background()
         foreground()
-      else
-        gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
       end
     end
   end
@@ -268,8 +277,26 @@ function screenSetup()
   else
     screen = gpu.getScreen()
   end
+
+  pcFound = false
+  for i = 1, #screenDirFile do
+    if screenDirFile[i][1] == computer.address() then
+      screenDirFile[i][2] = screen
+      pcFound = true
+    end
+  end
+  tmpFile = ""
+  for i = 1, #screenDirFile do
+    if screenDirFile[i][1] ~= nil and screenDirFile[i][2] ~= nil then
+      tmpFile = tmpFile.."\n"..screenDirFile[i][1].." "..screenDirFile[i][2]
+    end
+  end
+  screenDirFile = tmpFile
+  if pcFound == false then
+    screenDirFile = screenDirFile.."\n"..computer.address().." "..screen
+  end
   local file = assert(io.open(screenDir, "w"))
-  file:write(screen)
+  file:write(screenDirFile)
   file:close()
   computer.shutdown(true)
 end
@@ -284,17 +311,46 @@ function readerSetup()
     while getAddress == true do
       os.sleep()
     end
+    pcFound = false
+    for i = 1, #readerDirFile do
+      if readerDirFile[i][1] == computer.address() then
+        readerDirFile[i][2] = readerAddress
+        pcFound = true
+      end
+    end
+    tmpFile = ""
+    for i = 1, #readerDirFile do
+      if readerDirFile[i][1] ~= nil and readerDirFile[i][2] ~= nil then
+        tmpFile = tmpFile.."\n"..readerDirFile[i][1].." "..readerDirFile[i][2]
+      end
+    end
+    readerDirFile = tmpFile
+    if pcFound == false then
+      readerDirFile = readerDirFile.."\n"..computer.address().." "..readerAddress
+    end
   end
   local file = assert(io.open(readerDir, "w"))
-  file:write(readerAddress)
+  file:write(readerDirFile)
   file:close()
   computer.shutdown(true)
 end
 function dependents()
   if fs.exists(screenDir) == true then
     local file = assert(io.open(screenDir))
-    dispScreen = file:read(1000)
+    screenDirFile = file:read(1000)
+    screenDirFile = Split(screenDirFile, "\n")
+    pcFound = false
+    for i = 1, #screenDirFile do
+      screenDirFile[i] = Split(screenDirFile[i], " ")
+      if screenDirFile[i][1] == computer.address() then
+        dispScreen = screenDirFile[i][2]
+        pcFound = true
+      end
+    end
     file:close()
+    if pcFound == false then
+      dispScreen = ""
+    end
     if component.proxy(dispScreen) == nil then
       screenSetup()
     else
@@ -306,8 +362,20 @@ function dependents()
   gpu.bind(dispScreen)
   if fs.exists(readerDir) == true then
     local file = assert(io.open(readerDir))
-    readerAddress = file:read(1000)
+    readerDirFile = file:read(1000)
+    readerDirFile = Split(readerDirFile, "\n")
+    pcFound = false
+    for i = 1, #readerDirFile do
+      readerDirFile[i] = Split(readerDirFile[i], " ")
+      if readerDirFile[i][1] == computer.address() then
+        readerAddress = readerDirFile[i][2]
+        pcFound = true
+      end
+    end
     file:close()
+    if pcFound == false then
+      readerAddress = ""
+    end
     if component.proxy(readerAddress) == nil then
       readerSetup()
     end
