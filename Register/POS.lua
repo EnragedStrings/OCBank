@@ -1,3 +1,8 @@
+function rgb(r,g,b)
+  local rgb = (r * 0x10000) + (g * 0x100) + b
+  return tonumber((rgb))
+end
+
 buttonTheme = {
   background = rgb(5, 63, 150),
   foreground = rgb(255,255,255),
@@ -47,10 +52,6 @@ local fs = require("filesystem")
 --m = require("component").modem
 sW, sH = gpu.getResolution()
 local halt = false
-function rgb(r,g,b)
-  local rgb = (r * 0x10000) + (g * 0x100) + b
-  return tonumber((rgb))
-end
 
 
 local file = assert(io.open("/home/.shrc", "w"))
