@@ -81,10 +81,9 @@ mainTheme = {
 }
 
 local screens = {}
-for address, name in component.list("screen", false) do
+for address, name in component.list("screen", true) do
   table.insert(screens, component.proxy(address))
 end
-multiscreen = false
 function Split(s, delimiter)
   result = {};
   for match in (s..delimiter):gmatch("(.-)"..delimiter) do
@@ -180,14 +179,8 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
             assigned = true
             currentUser = users[i][2]
             usrLvl = users[i][3]
-            if multiscreen == true then
-              background(custScreen)
-            end
-            background(empScreen)
-            foreground(empScreen)
-            if multiscreen == true then
-              foreground(custScreen)
-            end
+            background()
+            foreground()
           end
         end
       end
@@ -234,27 +227,33 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
       os.sleep(2)
       pay = false
       processing = false
-      if multiscreen == true then
-        background(custScreen)
-      end
-      background(empScreen)
-      if multiscreen == true then
-        foreground(custScreen)
-      end
-      foreground(empScreen)
+      background()
+      foreground()
     else
       gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
     end
   end
 end
 function screenSetup()
-  if #component.list("screen", false) > 1 then
-    print("Input Screen Address")
-    screen = io.read()
-    while component.proxy(screen) == nil do
-      print("Invalid Address")
-      screen = io.read()
+  if #screens > 1 then
+    for i = 1, #screens do
+      if screens[i].address == gpu.getScreen() then
+        print("["..i.."] "..screens[i].address.." (Current)")
+      else
+        print("["..i.."] "..screens[i].address)
+      end
     end
+    print("Input Screen Number")
+    screen = tonumber(io.read())
+    while screen > #screens do
+      print("Invalid!")
+      screen = tonumber(io.read())
+    end
+    while screens[screen].address == nil do
+      print("Invalid!")
+      screen = tonumber(io.read())
+    end
+    screen = screens[screen].address
   else
     screen = gpu.getScreen()
   end
@@ -268,21 +267,10 @@ function dependents()
     local file = assert(io.open(screenDir))
     dispScreen = file:read(1000)
     file:close()
-    if dispScreen ~= nil then
-      trip = false
-      if component.proxy(dispScreen) == nil then
-        trip = true
-      end
-      if trip == true then
-        screenSetup()
-      else
-        multiscreen = false
-        empScreen = dispScreen
-        gpu.bind(empScreen)
-        custScreen = nil
-      end
-    else
+    if component.proxy(dispScreen) == nil then
       screenSetup()
+    else
+      gpu.bind(dispScreen)
     end
   else
     screenSetup()
@@ -471,17 +459,14 @@ function mouseClick(_, address, x, y, button, name)
               end
               file:write(newUsers)
               file:close()
-              background(empScreen)
+              background()
               mngr = false
-              foreground(empScreen)
+              foreground()
             end
           end
         elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false then
           selected = y - 3
-          foreground(empScreen)
-          if multiscreen == true then
-            foreground(custScreen)
-          end
+          foreground()
         elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false then
           start = 1
           for i = 1, #order do
@@ -494,10 +479,7 @@ function mouseClick(_, address, x, y, button, name)
                   table.remove(order, i)
                 end
               end
-              foreground(empScreen)
-              if multiscreen == true then
-                foreground(custScreen)
-              end
+              foreground()
               start = start + #order[i][4] + 1
             else
               start = start + #order[i][4] + 1
@@ -614,6 +596,7 @@ function createMenu()
   end
 end
 function boot()
+  gpu.bind(dispScreen)
   gpu.setBackground(0x000000)
   logo(0.05, true)
   assigned = false
@@ -738,9 +721,9 @@ function cnewUser()
   while newswipe == true do
     os.sleep()
   end
-  background(empScreen)
+  background()
   mngr = false
-  foreground(empScreen)
+  foreground()
 end
 function getTax(ServerID)
   token=apiKey
@@ -778,20 +761,13 @@ end
 createButton(2.5, sH-4, 3.5, 3, buttonTheme.c1, "Clear", false, true, buttonTheme.ct1, function()
   if assigned == true and pay == false and halt == false then
     order = {}
-    background(empScreen)
-    if multiscreen == true then
-      background(custScreen)
-    end
-    foreground(empScreen)
-    if multiscreen == true then
-      foreground(custScreen)
-    end
+    background()
+    foreground()
   end
 end
 )
 createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct2, function()
   if assigned == true and pay == false and halt == false then
-    multi(empScreen)
     if getSelector(selected) > #order then
       selected = orderpos
     end
@@ -811,14 +787,8 @@ createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct
       order[itemnum][3] = 1
     end
     order[itemnum][3] = order[itemnum][3] * quan
-    background(empScreen)
-    if multiscreen == true then
-      background(custScreen)
-    end
-    foreground(empScreen)
-    if multiscreen == true then
-      foreground(custScreen)
-    end
+    background()
+    foreground()
   end
 end
 )
@@ -844,20 +814,13 @@ createButton((sW/4)-5, sH-(13), 10, 3, buttonTheme.c1, "Cancel", false, true, bu
   if assigned == true and pay == true then
     pay = false
     processing = false
-    if multiscreen == true then
-      background(custScreen)
-    end
-    background(empScreen)
-    if multiscreen == true then
-      foreground(custScreen)
-    end
-    foreground(empScreen)
+    background()
+    foreground()
   end
 end
 )
 createButton(17, sH-6, 15.5, 3, buttonTheme.background, "New User", false, true, buttonTheme.foreground, function()
   if mngr == true and pay == false then
-    multi(empScreen)
     gpu.setBackground(mainTheme.foreground)
     gpu.setForeground(mainTheme.text)
     term.setCursor(35, #users+7)
@@ -897,7 +860,6 @@ createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, tr
     if usrLvl == "owner" or usrLvl == "manager" then
       if mngr == false then
         mngr = true
-        multi(empScreen)
         gpu.setForeground(mainTheme.text)
         gpu.setBackground(rgb(80,80,80))
         gpu.fill(29, 3, sW-56, sH-4, " ")
@@ -925,8 +887,8 @@ createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, tr
         end
       else
         mngr = false
-        background(empScreen)
-        foreground(empScreen)
+        background()
+        foreground()
       end
     end
   end
