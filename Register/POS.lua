@@ -1,19 +1,30 @@
-computer = require("computer")
-magReader = require("component").os_magreader
-writer = require("component").os_cardwriter
-component = require("component")
-gpu = require("component").gpu
-event = require("event")
-internet = require("internet")
-term = require("term")
-serialization = require("serialization")
-process = require("process")
-shell = require("shell")
-fs = require("filesystem")
+local process = require("process")
+local component = require("component")
+local term = require("term")
+process.info().data.signal = function() end
+
+local shown = false
+while not (component.isAvailable("internet") and component.isAvailable("gpu")) do
+  if shown == false then 
+    term.clear()
+    print("Key components not found.") 
+    shown = true
+  end
+  os.sleep(1)
+end
+
+local computer = require("computer")
+local magReader = require("component").os_magreader
+local writer = require("component").os_cardwriter
+local gpu = require("component").gpu
+local event = require("event")
+local internet = require("internet")
+local serialization = require("serialization")
+local shell = require("shell")
+local fs = require("filesystem")
 --m = require("component").modem
 sW, sH = gpu.getResolution()
-halt = false
-process.info().data.signal = function() end
+local halt = false
 function rgb(r,g,b)
   local rgb = (r * 0x10000) + (g * 0x100) + b
   return tonumber((rgb))
@@ -25,32 +36,32 @@ file:write("POS.lua")
 file:close()
 
 order = {}
-buttons = {}
-functions = {}
-items = {}
-columns = 6
-rowH = 3
-mWidth = (sW/2) - 28
-itemGap = 1
-itemWidth = (mWidth-((columns+1)*itemGap))/columns
-tax = 0.00
-total = 0
-pay = false
-subtotal = 0
-selected = 0
-itemnum = 0
-mngr = false
-isMngr = false
-createcard = false
-processing = false
-currency = "$"
+local buttons = {}
+local functions = {}
+local items = {}
+local columns = 6
+local rowH = 3
+local mWidth = (sW/2) - 28
+local itemGap = 1
+local itemWidth = (mWidth-((columns+1)*itemGap))/columns
+local tax = 0.00
+local total = 0
+local pay = false
+local subtotal = 0
+local selected = 0
+local itemnum = 0
+local mngr = false
+local isMngr = false
+local createcard = false
+local processing = false
+local currency = "$"
 
-screenDir = ("/home/screens.txt")
-userDir = ("/home/users.txt")
-menuDir = ("/home/menu.lua")
-orderDir = ("/home/orders.txt")
-apiKeyDir = ("/home/apiKey.txt")
-verDir = ("/home/version.txt")
+local screenDir = ("/home/screens.txt")
+local userDir = ("/home/users.txt")
+local menuDir = ("/home/menu.lua")
+local orderDir = ("/home/orders.txt")
+local apiKeyDir = ("/home/apiKey.txt")
+local verDir = ("/home/version.txt")
 
 buttonTheme = {
   background = rgb(5, 63, 150),
@@ -169,10 +180,14 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
             assigned = true
             currentUser = users[i][2]
             usrLvl = users[i][3]
-            background(custScreen)
+            if multiscreen == true then
+              background(custScreen)
+            end
             background(empScreen)
             foreground(empScreen)
-            foreground(custScreen)
+            if multiscreen == true then
+              foreground(custScreen)
+            end
           end
         end
       end
@@ -219,80 +234,58 @@ function magData(eventName, address, playerName, cardData, cardUniqueId, isCardL
       os.sleep(2)
       pay = false
       processing = false
-      background(custScreen)
+      if multiscreen == true then
+        background(custScreen)
+      end
       background(empScreen)
-      foreground(custScreen)
+      if multiscreen == true then
+        foreground(custScreen)
+      end
       foreground(empScreen)
     else
       gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
     end
   end
 end
-function multi(screenc)
-  if multiscreen == true and screenc ~= nil then
-    gpu.bind(screenc)
-  end
-end
 function screenSetup()
-  term.clear()
-  print("If current screen is employee screen, enter '1'. Else, enter '2'")
-  pickedScreen = tostring(io.read())
-  while pickedScreen ~= "1" and pickedScreen ~= "2" do
-    term.clear()
-    print("If current screen is employee screen, enter '1'. Else, enter '2'")
-    print("Invalid Input")
-    pickedScreen = tostring(io.read())
-  end
-  for i = 1, #screens do
-    if gpu.getScreen() == screens[i].address and pickedScreen == "1" then
-      for j = 1, #screens do
-        if i == j then
-          firstScreen = screens[j].address
-        else
-          secondScreen = screens[j].address
-        end
-      end
-    elseif gpu.getScreen() == screens[i].address and pickedScreen == "2" then
-      for j = 1, #screens do
-        if i == j then
-          secondScreen = screens[j].address
-        else
-          firstScreen = screens[j].address
-        end
-      end
+  if #component.list("screen", false) > 1 then
+    print("Input Screen Address")
+    screen = io.read()
+    while component.proxy(screen) == nil do
+      print("Invalid Address")
+      screen = io.read()
     end
+  else
+    screen = gpu.getScreen()
   end
   local file = assert(io.open(screenDir, "w"))
-  file:write(firstScreen.."\n"..secondScreen)
+  file:write(screen)
   file:close()
   computer.shutdown(true)
 end
 function dependents()
   if fs.exists(screenDir) == true then
     local file = assert(io.open(screenDir))
-    pScreens = Split(file:read(10000), "\n")
+    dispScreen = file:read(1000)
     file:close()
-    if pScreens ~= nil then
+    if dispScreen ~= nil then
       trip = false
-      for i = 1, 2 do
-        if component.proxy(pScreens[i]) == nil then
-          trip = true
-        end
+      if component.proxy(dispScreen) == nil then
+        trip = true
       end
       if trip == true then
-        if #screens > 1 then
-          screenSetup()
-        end
+        screenSetup()
       else
-        multiscreen = true
-        empScreen = pScreens[1]
-        custScreen = pScreens[2]
+        multiscreen = false
+        empScreen = dispScreen
+        gpu.bind(empScreen)
+        custScreen = nil
       end
     else
-      if #screens > 1 then
-        screenSetup()
-      end
+      screenSetup()
     end
+  else
+    screenSetup()
   end
   if fs.exists(verDir) == true then
     local file = assert(io.open(verDir))
@@ -454,8 +447,7 @@ function refreshButton(name)
 end
 function mouseClick(_, address, x, y, button, name)
   if halt == false then
-    if address == custScreen then
-    else
+    if address == dispScreen then
       if button == 0 then
         if x >= 61 and 64 > x and y > 6 and 30 > y and pay == false then
           removed = false
@@ -487,7 +479,9 @@ function mouseClick(_, address, x, y, button, name)
         elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false then
           selected = y - 3
           foreground(empScreen)
-          foreground(custScreen)
+          if multiscreen == true then
+            foreground(custScreen)
+          end
         elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false then
           start = 1
           for i = 1, #order do
@@ -501,7 +495,9 @@ function mouseClick(_, address, x, y, button, name)
                 end
               end
               foreground(empScreen)
-              foreground(custScreen)
+              if multiscreen == true then
+                foreground(custScreen)
+              end
               start = start + #order[i][4] + 1
             else
               start = start + #order[i][4] + 1
@@ -519,8 +515,7 @@ function mouseClick(_, address, x, y, button, name)
     end
   end
 end
-function logo(time, color, lscreen)
-  multi(lscreen)
+function logo(time, color)
   term.clear()
   if color == true then
       gpu.setForeground(0x00FF00)
@@ -607,8 +602,7 @@ function createMenu()
                     table.insert(order, {buttonClicked, menu[l].price, 1, menu[l].contents})
                     selected = getorderpos(#order)
                   end
-                  foreground(empScreen)
-                  foreground(custScreen)
+                  foreground()
                 end
               end
             end
@@ -620,12 +614,8 @@ function createMenu()
   end
 end
 function boot()
-  multi(empScreen)
   gpu.setBackground(0x000000)
-  if custScreen ~= nil then
-    logo(0.05, true, custScreen)
-  end
-  logo(0.05, true, empScreen)
+  logo(0.05, true)
   assigned = false
   event.listen("magData", magData)
   while assigned == false do
@@ -634,8 +624,7 @@ function boot()
     gpu.set(sW-4, sH, os.date("%H:%M"))
   end
 end
-function background(bscreen)
-  multi(bscreen)
+function background()
   gpu.setBackground(mainTheme.background)
   gpu.fill(1, 1, sW, sH, " ")
   gpu.fill(sW-29, 3, 2, sH-4, " ")
@@ -654,15 +643,9 @@ function calcTotal()
   end
   total = math.floor((((subtotal*tax)+subtotal)*100)+0.5)/100
   gpu.setForeground(mainTheme.text)
-  if gpu.getScreen() == custScreen then
-    gpu.set(25-#(shorten(subtotal,2, true)), sH-5, currency..(shorten(subtotal,2, true)))
-    gpu.set(25-#(shorten(tax*subtotal,2, true)), sH-4, (currency..shorten(tax*subtotal,2, true)))
-    gpu.set(25-#format_int(string.format("%.2f",total)), sH-3, currency..format_int(string.format("%.2f",total)))
-  else
-    gpu.set(25-#(shorten(subtotal,2, true)), sH-8, currency..(shorten(subtotal,2, true)))
-    gpu.set(25-#(shorten(tax*subtotal,2, true)), sH-7, (currency..shorten(tax*subtotal,2, true)))
-    gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
-  end
+  gpu.set(25-#(shorten(subtotal,2, true)), sH-8, currency..(shorten(subtotal,2, true)))
+  gpu.set(25-#(shorten(tax*subtotal,2, true)), sH-7, (currency..shorten(tax*subtotal,2, true)))
+  gpu.set(25-#format_int(string.format("%.2f",total)), sH-6, currency..format_int(string.format("%.2f",total)))
 end
 function getSelector(input)
   position = 0
@@ -682,8 +665,7 @@ function getorderpos(ordernum)
   end
   return(position2+1)
 end
-function refreshOrder(screen)
-  multi(screen)
+function refreshOrder()
   gpu.setBackground(mainTheme.foreground)
   if getSelector(selected) > #order then
     selected = orderpos
@@ -726,43 +708,26 @@ function refreshOrder(screen)
       end
     end
     price = tostring(shorten((tonumber(order[i][2])*tonumber(order[i][3])), 2, true))
-    if gpu.getScreen() ~= custScreen then
-      gpu.set(22-#price, 3+data, currency..price.."[-]")
-    else
-      gpu.set(25-#price, 3+data, currency..price)
-    end
+    gpu.set(22-#price, 3+data, currency..price.."[-]")
   end
   calcTotal()
 end
-function foreground(fscreen)
-  multi(fscreen)
+function foreground()
   menu = getMenu()
   gpu.setBackground(mainTheme.foreground)
-  if gpu.getScreen() ~= custScreen then
-    gpu.fill(5, 3, 22, sH-7, " ")
-  else
-    gpu.fill(5, 3, 22, sH-4, " ")
-  end
-  if gpu.getScreen() == custScreen then
-    gpu.set(6, sH-5, "Subtotal:")
-    gpu.set(6, sH-4, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-3, "Total:")
-  else
-    gpu.set(6, sH-8, "Subtotal:")
-    gpu.set(6, sH-7, "Tax: "..shorten(tax*100, 2, true).."%")
-    gpu.set(6, sH-6, "Total:")
-  end
+  gpu.fill(5, 3, 22, sH-4, " ")
+  gpu.set(6, sH-8, "Subtotal:")
+  gpu.set(6, sH-7, "Tax: "..shorten(tax*100, 2, true).."%")
+  gpu.set(6, sH-6, "Total:")
   gpu.setForeground(mainTheme.text)
-  if fscreen == empScreen then
-    gpu.setBackground(rgb(10, 10, 10))
-    gpu.setBackground(mainTheme.background)
-    gpu.set(1, sH, "Created By EnragedStrings | User: "..string.upper(currentUser).." | "..string.upper(usrLvl))
-    if usrLvl == "owner" or usrLvl == "manager" then
-      refreshButton("Mngr Func")
-    end
-    refreshOrder(fscreen)
-    refreshButtons({"Mngr Func", "New User", "Cancel", "Reboot", "Stop POS"})
+  gpu.setBackground(rgb(10, 10, 10))
+  gpu.setBackground(mainTheme.background)
+  gpu.set(1, sH, "Created By EnragedStrings | User: "..string.upper(currentUser).." | "..string.upper(usrLvl))
+  if usrLvl == "owner" or usrLvl == "manager" then
+    refreshButton("Mngr Func")
   end
+  refreshOrder()
+  refreshButtons({"Mngr Func", "New User", "Cancel", "Reboot", "Stop POS"})
 end
 function cnewUser()
   gpu.set(35, #users+8, "Input Card")
@@ -814,9 +779,13 @@ createButton(2.5, sH-4, 3.5, 3, buttonTheme.c1, "Clear", false, true, buttonThem
   if assigned == true and pay == false and halt == false then
     order = {}
     background(empScreen)
-    background(custScreen)
+    if multiscreen == true then
+      background(custScreen)
+    end
     foreground(empScreen)
-    foreground(custScreen)
+    if multiscreen == true then
+      foreground(custScreen)
+    end
   end
 end
 )
@@ -843,9 +812,13 @@ createButton(6, sH-4, 4, 3, buttonTheme.c2, "Quant", false, true, buttonTheme.ct
     end
     order[itemnum][3] = order[itemnum][3] * quan
     background(empScreen)
-    background(custScreen)
+    if multiscreen == true then
+      background(custScreen)
+    end
     foreground(empScreen)
-    foreground(custScreen)
+    if multiscreen == true then
+      foreground(custScreen)
+    end
   end
 end
 )
@@ -871,9 +844,13 @@ createButton((sW/4)-5, sH-(13), 10, 3, buttonTheme.c1, "Cancel", false, true, bu
   if assigned == true and pay == true then
     pay = false
     processing = false
-    background(custScreen)
+    if multiscreen == true then
+      background(custScreen)
+    end
     background(empScreen)
-    foreground(custScreen)
+    if multiscreen == true then
+      foreground(custScreen)
+    end
     foreground(empScreen)
   end
 end
