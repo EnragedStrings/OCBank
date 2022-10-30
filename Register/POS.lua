@@ -57,6 +57,7 @@ local processing = false
 local currency = "$"
 
 local screenDir = ("/home/screens.txt")
+local readerDir = ("/home/reader.txt")
 local userDir = ("/home/users.txt")
 local menuDir = ("/home/menu.lua")
 local orderDir = ("/home/orders.txt")
@@ -83,6 +84,10 @@ mainTheme = {
 local screens = {}
 for address, name in component.list("screen", true) do
   table.insert(screens, component.proxy(address))
+end
+local readers = {}
+for address, name in component.list("os_magreader", true) do
+  table.insert(readers, component.proxy(address))
 end
 function Split(s, delimiter)
   result = {};
@@ -163,74 +168,80 @@ function format_int(number)
 end
 function magData(eventName, address, playerName, cardData, cardUniqueId, isCardLocked, side)
   --Listens To Card Readers
-  if assigned == false then
-    if getAPI == true then
-      apiKey = cardData
-      print("Input POS Company Card Number")
-      POSCard = io.read()
-      local file = assert(io.open(apiKeyDir, "w"))
-      file:write(apiKey.." "..POSCard)
-      file:close()
-      computer.shutdown(true)
-    else
-      for i = 1, #users do
-        if users[i][1] == cardUniqueId or users[i][1] == "nil" then
-          if users[i][2] == "defaultUser" or users[i][1] == cardUniqueId then
-            assigned = true
-            currentUser = users[i][2]
-            usrLvl = users[i][3]
-            background()
-            foreground()
+  if getAddress == true then
+    print(address)
+    readerAddress = address
+    getAddress = false
+  elseif address == readerAddress then
+    if assigned == false then
+      if getAPI == true then
+        apiKey = cardData
+        print("Input POS Company Card Number")
+        POSCard = io.read()
+        local file = assert(io.open(apiKeyDir, "w"))
+        file:write(apiKey.." "..POSCard)
+        file:close()
+        computer.shutdown(true)
+      else
+        for i = 1, #users do
+          if users[i][1] == cardUniqueId or users[i][1] == "nil" then
+            if users[i][2] == "defaultUser" or users[i][1] == cardUniqueId then
+              assigned = true
+              currentUser = users[i][2]
+              usrLvl = users[i][3]
+              background()
+              foreground()
+            end
           end
         end
       end
-    end
-  elseif newMemeberCard == true then
-    m.broadcast(8000, "SMCP cadd "..cardUniqueId.." 1 "..cardName)
-    newMemeberCard = false
-  elseif newswipe == true then
-    copy = false
-    for i = 1, #users do
-      if users[i][1] == cardUniqueId then
-        copy = true
-      end
-    end
-    if copy == false then
-      table.insert(users, {cardUniqueId,newUser[1],newUser[2]})
-      local file = assert(io.open(userDir, "w"))
-      newUsers = ""
+    elseif newMemeberCard == true then
+      m.broadcast(8000, "SMCP cadd "..cardUniqueId.." 1 "..cardName)
+      newMemeberCard = false
+    elseif newswipe == true then
+      copy = false
       for i = 1, #users do
-        if i == #users then
-          newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
-        else
-          newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
+        if users[i][1] == cardUniqueId then
+          copy = true
         end
       end
-      file:write(newUsers)
-      file:close()
-      newswipe = false
-    end
-  elseif pay == true and processing == false then
-    processing = true
-    gpu.setBackground(mainTheme.foreground)
-    gpu.fill((sW/2)-9, pheight+4, 18, 1, " ")
-    gpu.set((sW/2)-7, pheight+4, "Input Pin:")
-    term.setCursor((sW/2)+4, pheight+4)
-    pininput = io.read()
-    while pininput == "" or pininput == nil do
+      if copy == false then
+        table.insert(users, {cardUniqueId,newUser[1],newUser[2]})
+        local file = assert(io.open(userDir, "w"))
+        newUsers = ""
+        for i = 1, #users do
+          if i == #users then
+            newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3]
+          else
+            newUsers = newUsers..users[i][1].." "..users[i][2].." "..users[i][3].."\n"
+          end
+        end
+        file:write(newUsers)
+        file:close()
+        newswipe = false
+      end
+    elseif pay == true and processing == false then
+      processing = true
+      gpu.setBackground(mainTheme.foreground)
+      gpu.fill((sW/2)-9, pheight+4, 18, 1, " ")
+      gpu.set((sW/2)-7, pheight+4, "Input Pin:")
       term.setCursor((sW/2)+4, pheight+4)
       pininput = io.read()
-    end
-    transresult = transaction(apiKey, cardData, pininput, POSCard, subtotal)
-    if string.find(transresult, "Approved") ~= nil then
-      gpu.set((sW/2)-(4.5), pheight+6, "Approved!")
-      os.sleep(2)
-      pay = false
-      processing = false
-      background()
-      foreground()
-    else
-      gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
+      while pininput == "" or pininput == nil do
+        term.setCursor((sW/2)+4, pheight+4)
+        pininput = io.read()
+      end
+      transresult = transaction(apiKey, cardData, pininput, POSCard, subtotal)
+      if string.find(transresult, "Approved") ~= nil then
+        gpu.set((sW/2)-(4.5), pheight+6, "Approved!")
+        os.sleep(2)
+        pay = false
+        processing = false
+        background()
+        foreground()
+      else
+        gpu.set((sW/2)-(4.5), pheight+6, "Declined!")
+      end
     end
   end
 end
@@ -262,6 +273,23 @@ function screenSetup()
   file:close()
   computer.shutdown(true)
 end
+function readerSetup()
+  if #readers > 1 then
+    for i = 1, #readers do
+      print("["..i.."] "..readers[i].address)
+    end
+    print("Swipe Card Reader")
+    getAddress = true
+    event.listen("magData", magData)
+    while getAddress == true do
+      os.sleep()
+    end
+  end
+  local file = assert(io.open(readerDir, "w"))
+  file:write(readerAddress)
+  file:close()
+  computer.shutdown(true)
+end
 function dependents()
   if fs.exists(screenDir) == true then
     local file = assert(io.open(screenDir))
@@ -274,6 +302,17 @@ function dependents()
     end
   else
     screenSetup()
+  end
+  gpu.bind(dispScreen)
+  if fs.exists(readerDir) == true then
+    local file = assert(io.open(readerDir))
+    readerAddress = file:read(1000)
+    file:close()
+    if component.proxy(readerAddress) == nil then
+      readerSetup()
+    end
+  else
+    readerSetup()
   end
   if fs.exists(verDir) == true then
     local file = assert(io.open(verDir))
