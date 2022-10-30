@@ -544,7 +544,7 @@ function mouseClick(_, address, x, y, button, name)
   if halt == false then
     if address == dispScreen then
       if button == 0 then
-        if x >= 61 and 64 > x and y > 6 and 30 > y and pay == false then
+        if x >= 61 and 64 > x and y > 6 and 30 > y and pay == false and assigned == true then
           removed = false
           if users[y-6][2] ~= currentUser or currentUser == "defaultUser" then
             if usrLvl == "manager" and users[y-6][3] == "employee" then
@@ -571,10 +571,10 @@ function mouseClick(_, address, x, y, button, name)
               foreground()
             end
           end
-        elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false then
+        elseif x >= 6 and 23 > x and y > 3 and 30 > y and pay == false and assigned == true then
           selected = y - 3
           foreground()
-        elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false then
+        elseif x >= 23 and 26 > x and y > 3 and 30 > y and pay == false and assigned == true then
           start = 1
           for i = 1, #order do
             if start == y-3 then
@@ -708,7 +708,8 @@ function boot()
   logo(0.05, true)
   assigned = false
   event.listen("magData", magData)
-  while assigned == false do
+  refreshButton("Admin")
+  while assigned == false and halt == false do
     os.sleep()
     gpu.setForeground(mainTheme.text)
     gpu.set(sW-4, sH, os.date("%H:%M"))
@@ -817,7 +818,7 @@ function foreground()
     refreshButton("Mngr Func")
   end
   refreshOrder()
-  refreshButtons({"Mngr Func", "New User", "Cancel", "Reboot", "Stop POS"})
+  refreshButtons({"Mngr Func", "New User", "Cancel", "Reboot", "Stop POS", "Admin"})
 end
 function cnewUser()
   gpu.set(35, #users+8, "Input Card")
@@ -848,7 +849,6 @@ function transaction(ServerID, pullfrom, pin, sendto, amount)
   } 
   requeststring = ("http://69.164.205.86/"..ServerID.."/?cardNum="..pullfrom.."&pin="..pin.."&tcardNum="..sendto.."&tamnt="..amount)
   local handle = internet.request(requeststring, {}, headers, "GET")
-  --local handle = internet.request("http://69.164.205.86/1234567/?cardNum=Data5&pin=0004&tcardNum=Data4&tamnt=500", {}, headers, "GET")
   processing = false
   return(handle())
 end
@@ -1001,14 +1001,37 @@ createButton((sW/2)-12, 4, 10, 3, buttonTheme.background, "Mngr Func", false, tr
   end
 end
 )
+createButton(0.5, 1, 1, 1, 0x000000, "Admin", false, false, 0x000000, function()
+  if assigned == false then
+    term.clear()
+    print("Input Code:")
+    code = io.read()
+    token=apiKey
+    headers = {
+      access_token=token
+    } 
+    requeststring = ("http://69.164.205.86/admin/"..code)
+    local handle = internet.request(requeststring, {}, headers, "GET")
+    coderesult = handle()
+    if string.find(coderesult, "Granted") then
+      gpu.setBackground(0x000000)
+      term.clear()
+      halt = true
+      event.ignore("touch")
+      event.ignore("magData")
+    else
+      boot()
+    end
+  end
+end
+)
 
+event.listen("touch", mouseClick)
 createMenu()
 boot()
 
-event.listen("touch", mouseClick)
-
 while halt == false do
-    os.sleep(0.1)
+    os.sleep()
     gpu.setBackground(mainTheme.background)
     gpu.setForeground(mainTheme.text)
     gpu.set(sW-4, sH, os.date("%H:%M"))
