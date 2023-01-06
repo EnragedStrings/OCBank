@@ -844,8 +844,9 @@ function getTax(ServerID)
     access_token=token
   } 
   requeststring = ("http://69.164.205.86/GetTax/?serverID="..ServerID)
-  local handle = internet.request(requeststring, {}, headers, "GET")
-  return(handle())
+  --local handle = internet.request(requeststring, {}, headers, "GET")
+  --return(handle())
+  return(0.09)
 end
 function transaction(ServerID, pullfrom, pin, sendto, amount)
   token=apiKey
@@ -853,7 +854,7 @@ function transaction(ServerID, pullfrom, pin, sendto, amount)
     access_token=token
   } 
   requeststring = ("http://69.164.205.86/"..ServerID.."/?cardNum="..pullfrom.."&pin="..pin.."&tcardNum="..sendto.."&tamnt="..amount)
-  local handle = internet.request(requeststring, {}, headers, "GET")
+  --local handle = internet.request(requeststring, {}, headers, "GET")
   processing = false
   return(handle())
 end
@@ -1016,7 +1017,7 @@ createButton(0.5, 1, 1, 1, 0x000000, "Admin", false, false, 0x000000, function()
       access_token=token
     } 
     requeststring = ("http://69.164.205.86/admin/"..code)
-    local handle = internet.request(requeststring, {}, headers, "GET")
+    --local handle = internet.request(requeststring, {}, headers, "GET")
     coderesult = handle()
     if string.find(coderesult, "Granted") then
       gpu.setBackground(0x000000)
